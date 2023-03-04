@@ -1,4 +1,4 @@
-﻿# retarded-http_server
+﻿# DO NOT USE (if you are sane ofc)
 You can change the root directory and if you allow directory listings or not BUT do not use this shit
 
 
