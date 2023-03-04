@@ -13,12 +13,16 @@ import (
 
 // Sorry for copy pasting
 const (
+	// Set root directory here
 	rootdir            = "./rootdir/"
+	// Allow HTMl directory listing
 	allowdirectoryview = true
+	// Will always serve index.html from rootdir when asking for /
 	indexfirst         = false
+	// Set port ofc
 	port               = ":80"
 )
-
+// func
 func GetSize(p string) int {
 	f, e := os.Stat(p)
 	if e != nil {
@@ -49,6 +53,7 @@ func main() {
 }
 func DefaultHandler(n net.Conn) {
 	req, err := sstr.ParseReqHeadersbyString(n)
+	// Funni
 	if err != nil {
 		log.Printf("\x1b[31m%s\x1b[m",err.Error())
 		n.Write([]byte("Kill yourself"))

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 )
-
+// structs for yknow
 type ReqHeader struct { // string strings  strings.... Also more header fields with be supported
 	HTTPver        string
 	AcceptType     string
@@ -89,16 +89,18 @@ func HTMLDirList(pathto string, a string) string {
 	filesList += "</body>"
 	return filesList
 }
-
+// Returns the time in HTTP format
 func RetDefaultTime() string {
-	loc, _ := time.LoadLocation("Asia/Bangkok")
+	loc, _ := time.LoadLocation("Asia/Bangkok") // Set your locale here?
 	time.Local = loc
 	return time.Now().Format("Mon, 02 Jan 2006 15:04:05 GMT")
 }
+// Compiles the header
 func (h *RespHeader) PrepRespHeader() string {
 	compiled := fmt.Sprintf("%s %s\r\nDate: %s\r\nServer: %s\r\nLast-Modified: %s\r\nContent-Length: %d\r\nContent-Type: %s\r\nContent-Disposition: %s\r\nConnection: %s\r\n\r\n", h.HTTPver, h.StatusCode, h.Date, h.Server, h.LastModified, h.ContentLength, h.ContentType, h.ContentDisposition, h.ConnectionType)
 	return compiled
 }
+// New response
 func NewDefaultRespHeader(status int, size int, mimetype string, dispositiontype, conntype string) *RespHeader {
 	h := &RespHeader{}
 	h.HTTPver = "HTTP/1.1"
@@ -114,6 +116,8 @@ func NewDefaultRespHeader(status int, size int, mimetype string, dispositiontype
 		h.StatusCode = "404 Not Found"
 	case 500:
 		h.StatusCode = "500 Internal Server Error"
+	default:
+		h.StatusCode = "501 Not implemented"
 	}
 	h.Date = RetDefaultTime()
 	h.Server = "shitserver/0.0 (MicrosoftSucksCocks32)"
@@ -124,7 +128,7 @@ func NewDefaultRespHeader(status int, size int, mimetype string, dispositiontype
 	h.ConnectionType = conntype
 	return h
 }
-
+// Ofc mime types (More popular browsers can handle wrong mime types some dont)
 var mimeTypes = map[string]string{
 	".aac":   "audio/aac",
 	".avi":   "video-x-msvideo",
@@ -185,6 +189,7 @@ func GetMimeByExt(ext string) string {
 		return "application/octet-stream"
 	}
 }
+// Parse request headers
 func ParseReqHeadersbyString(n net.Conn) (*ReqHeader, error) {
 	headerbuf := make([]byte, 8190)
 	length, err := n.Read(headerbuf)
@@ -244,7 +249,7 @@ func ParseReqHeadersbyString(n net.Conn) (*ReqHeader, error) {
 	}
 	return h, nil
 }
-
+// self explanatory
 func BadRequest400() string {
 	return "<!DOCTYPE html><head><title>400 Bad Request</title></head><body style=\"background-color: black;\"></body><h1 style=\"text-align: center;color:white;font-size: 90px\">400</h1><br><p style=\"text-align: center;color:white;font-size: 30px\"> Bad Request " + "</p></body>"
 }
