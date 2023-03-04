@@ -45,8 +45,8 @@ type RespHeader struct {
 var Mediasoundext = []string{".m4a", ".opus", ".flac", ".wav", ".mp3", ".m4b"}
 var Vidext = []string{".mp4", ".mkv", ".ogg", ".avi", ".mpeg", ".svi", ".mov", ".flv", ".f4v", ".webm"}
 var Imgex = []string{".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico", ".bmp"}
-func HTMLDirList(pathto string) string {
-    filesListRaw, err := ioutil.ReadDir("./" + pathto)
+func HTMLDirList(pathto string,a string) string {
+    filesListRaw, err := ioutil.ReadDir("./"+ pathto + a)
     if err != nil {
         log.Printf("%v\n" + err.Error())
     }
@@ -55,7 +55,7 @@ func HTMLDirList(pathto string) string {
     }
     filesList := "<!DOCTYPE html><body style=\"background-color:black\"><p style=\"color: white;font-size:20px;\"><b>Index of " + pathto + "</b></p>"
     for index, file := range filesListRaw {
-        filesList += "<a href=\"" + path.Join(file.Name()) + "\"><u style=\"text-decoration-color: black;\"><p style=\"font-size: 0.6cm;color:white\">" + strconv.Itoa(index+1) + ". " + func(currfile fs.FileInfo) string {
+        filesList += "<a href=\"" + a + "\"><u style=\"text-decoration-color: black;\"><p style=\"font-size: 0.6cm;color:white\">" + strconv.Itoa(index+1) + ". " + func(currfile fs.FileInfo) string {
             currfile.IsDir()
             if currfile.IsDir() {
                 return "\U0001F4C1"
