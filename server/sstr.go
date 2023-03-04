@@ -48,7 +48,6 @@ var Imgex = []string{".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico", "
 
 func HTMLDirList(pathto string, a string) string {
 	filesListRaw, err := ioutil.ReadDir("./" + pathto + a)
-	fmt.Printf("\n%v %v", pathto, a)
 	if err != nil {
 		log.Printf("%v %v\n" + err.Error())
 	}

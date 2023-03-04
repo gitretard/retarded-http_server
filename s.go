@@ -12,9 +12,10 @@ import (
 )
 
 // Sorry for copy pasting
-const(
-	rootdir = "rootdir"
+const (
+	rootdir            = "rootdir"
 	allowdirectoryview = true
+	indexfirst         = true
 )
 
 func Checkerr(err error) {
@@ -23,7 +24,6 @@ func Checkerr(err error) {
 	}
 }
 func main() {
-	fmt.Println("Starting!")
 	ln, err := net.Listen("tcp", ":80")
 	if err != nil {
 		log.Println(err.Error())
@@ -47,12 +47,21 @@ func DefaultHandler(n net.Conn) {
 		GET(req, n)
 	}
 }
+
 // Very ugly code sorry for that
 func GET(req *sstr.ReqHeader, n net.Conn) {
 	header := &sstr.RespHeader{}
 	localpath, err := url.QueryUnescape(req.RequestPath)
 	Checkerr(err)
 	fmt.Printf("\x1b[32mFrom: \x1b[33m%s\n%s %s %s\x1b[m\n\x1b[32mUser-Agent: \x1b[33m%s\x1b[m\n\x1b[32mAccepted types: \x1b[33m%s\x1b[m\n\n", n.RemoteAddr(), req.Method, req.RequestPath, req.HTTPver, req.UserAgent, req.AcceptType)
+	if indexfirst {
+		if _, err := os.Stat(rootdir + "/" + "index.html"); os.IsExist(err) {
+			sendFile(n, rootdir+"/"+"index.html")
+		}
+		if _, err := os.Stat(rootdir + "/" + "index.htm"); os.IsExist(err) {
+			sendFile(n, rootdir+"/"+"index.htm")
+		}
+	}
 	if req.RequestPath == "Not Provided" {
 		header = sstr.NewDefaultRespHeader(400, len(sstr.BadRequest400()), "text/html", "inline;", "close")
 		headerts := header.PrepRespHeader()
@@ -70,10 +79,10 @@ func GET(req *sstr.ReqHeader, n net.Conn) {
 	}
 	if stat.IsDir() {
 		if allowdirectoryview {
-			header = sstr.NewDefaultRespHeader(200, len(sstr.HTMLDirList(rootdir,req.RequestPath)), "text/html; charset=utf-8", "inline;", "close")
+			header = sstr.NewDefaultRespHeader(200, len(sstr.HTMLDirList(rootdir, req.RequestPath)), "text/html; charset=utf-8", "inline;", "close")
 			headerts := header.PrepRespHeader()
 			fmt.Printf("Sent Header:\x1b[34m\n%s\x1b[m", headerts)
-			n.Write([]byte(headerts + sstr.HTMLDirList(rootdir,localpath)))
+			n.Write([]byte(headerts + sstr.HTMLDirList(rootdir, localpath)))
 			return
 		} else {
 			header = sstr.NewDefaultRespHeader(404, len(sstr.NotFound404(req.RequestPath)), "text/html", "inline;", "close")
