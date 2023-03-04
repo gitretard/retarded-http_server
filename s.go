@@ -13,21 +13,30 @@ import (
 
 // Sorry for copy pasting
 const (
-	rootdir            = "rootdir"
+	rootdir            = "./rootdir/"
 	allowdirectoryview = true
-	indexfirst         = true
+	indexfirst         = false
+	port = ":80"
 )
-
+func GetSize(p string) int{
+	f,e := os.Stat(p)
+	if e!=nil{
+		log.Println(e.Error())
+		return 0
+	}
+	return int(f.Size())
+}
 func Checkerr(err error) {
 	if err != nil {
 		log.Printf("\n" + err.Error())
 	}
 }
 func main() {
-	ln, err := net.Listen("tcp", ":80")
+	ln, err := net.Listen("tcp", port)
 	if err != nil {
-		log.Println(err.Error())
+		log.Fatalf(err.Error())
 	}
+	fmt.Printf("\x1b[32mSucessfully listening on %s!\x1b[m\n",port)
 	for {
 		acp, err := ln.Accept()
 		if err != nil {
@@ -50,20 +59,23 @@ func DefaultHandler(n net.Conn) {
 
 // Very ugly code sorry for that
 func GET(req *sstr.ReqHeader, n net.Conn) {
-	header := &sstr.RespHeader{}
 	localpath, err := url.QueryUnescape(req.RequestPath)
 	Checkerr(err)
 	fmt.Printf("\x1b[32mFrom: \x1b[33m%s\n%s %s %s\x1b[m\n\x1b[32mUser-Agent: \x1b[33m%s\x1b[m\n\x1b[32mAccepted types: \x1b[33m%s\x1b[m\n\n", n.RemoteAddr(), req.Method, req.RequestPath, req.HTTPver, req.UserAgent, req.AcceptType)
 	if indexfirst {
-		if _, err := os.Stat(rootdir + "/" + "index.html"); os.IsExist(err) {
-			sendFile(n, rootdir+"/"+"index.html")
+		header := sstr.NewDefaultRespHeader(200, GetSize(rootdir+"/"+"index.html"), "text/html; charset=utf-8", "inline;", "close")
+		n.Write([]byte(header.PrepRespHeader()))
+		err := sendFile(n,rootdir+"/"+"index.html")
+		if err!=nil{
+			err = sendFile(n,rootdir+"/"+"index.html")
+			if err != nil{
+				log.Println(err.Error())
+			}
 		}
-		if _, err := os.Stat(rootdir + "/" + "index.htm"); os.IsExist(err) {
-			sendFile(n, rootdir+"/"+"index.htm")
-		}
+		return
 	}
 	if req.RequestPath == "Not Provided" {
-		header = sstr.NewDefaultRespHeader(400, len(sstr.BadRequest400()), "text/html", "inline;", "close")
+		header := sstr.NewDefaultRespHeader(400, len(sstr.BadRequest400()), "text/html", "inline;", "close")
 		headerts := header.PrepRespHeader()
 		fmt.Printf("Sent Header:\n\x1b[34m%s\x1b[m", headerts)
 		n.Write([]byte(headerts + sstr.BadRequest400()))
@@ -71,7 +83,7 @@ func GET(req *sstr.ReqHeader, n net.Conn) {
 	}
 	stat, err := os.Stat(rootdir + localpath)
 	if err != nil {
-		header = sstr.NewDefaultRespHeader(404, len(sstr.NotFound404(localpath)), "text/html; charset=utf-8", "inline;", "close")
+		header := sstr.NewDefaultRespHeader(404, len(sstr.NotFound404(localpath)), "text/html; charset=utf-8", "inline;", "close")
 		headerts := header.PrepRespHeader()
 		fmt.Printf("Sent Header:\n\x1b[34m%s\x1b[m", headerts)
 		n.Write([]byte(headerts + sstr.NotFound404(localpath)))
@@ -79,13 +91,13 @@ func GET(req *sstr.ReqHeader, n net.Conn) {
 	}
 	if stat.IsDir() {
 		if allowdirectoryview {
-			header = sstr.NewDefaultRespHeader(200, len(sstr.HTMLDirList(rootdir, req.RequestPath)), "text/html; charset=utf-8", "inline;", "close")
+			header := sstr.NewDefaultRespHeader(200, len(sstr.HTMLDirList(rootdir, req.RequestPath)), "text/html; charset=utf-8", "inline;", "close")
 			headerts := header.PrepRespHeader()
 			fmt.Printf("Sent Header:\x1b[34m\n%s\x1b[m", headerts)
 			n.Write([]byte(headerts + sstr.HTMLDirList(rootdir, localpath)))
 			return
 		} else {
-			header = sstr.NewDefaultRespHeader(404, len(sstr.NotFound404(req.RequestPath)), "text/html", "inline;", "close")
+			header := sstr.NewDefaultRespHeader(404, len(sstr.NotFound404(req.RequestPath)), "text/html", "inline;", "close")
 			headerts := header.PrepRespHeader()
 			fmt.Printf("Sent Header:\n\x1b[34m%s\x1b[m", headerts)
 			n.Write([]byte(headerts + sstr.NotFound404(req.RequestPath)))
@@ -93,7 +105,7 @@ func GET(req *sstr.ReqHeader, n net.Conn) {
 		}
 	} else {
 		ftype := sstr.GetMimeByExt(filepath.Ext(rootdir + req.RequestPath))
-		header = sstr.NewDefaultRespHeader(200, int(stat.Size()), ftype, "inline", "keep-alive")
+		header := sstr.NewDefaultRespHeader(200, int(stat.Size()), ftype, "inline", "keep-alive")
 		headerts := header.PrepRespHeader()
 		fmt.Printf("Sent Header:\n\x1b[34m%s\x1b[m", headerts)
 		n.Write([]byte(headerts))
