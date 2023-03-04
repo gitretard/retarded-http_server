@@ -16,11 +16,12 @@ const (
 	rootdir            = "./rootdir/"
 	allowdirectoryview = true
 	indexfirst         = false
-	port = ":80"
+	port               = ":80"
 )
-func GetSize(p string) int{
-	f,e := os.Stat(p)
-	if e!=nil{
+
+func GetSize(p string) int {
+	f, e := os.Stat(p)
+	if e != nil {
 		log.Println(e.Error())
 		return 0
 	}
@@ -36,7 +37,7 @@ func main() {
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
-	fmt.Printf("\x1b[32mSucessfully listening on %s!\x1b[m\n",port)
+	fmt.Printf("\x1b[32mSucessfully listening on %s!\x1b[m\n", port)
 	for {
 		acp, err := ln.Accept()
 		if err != nil {
@@ -48,9 +49,13 @@ func main() {
 }
 func DefaultHandler(n net.Conn) {
 	req, err := sstr.ParseReqHeadersbyString(n)
-	Checkerr(err)
-	if req.Method == "Not Provided" || req.RequestPath == "Not Provided" {
-		n.Write([]byte("Kill youself"))
+	if err != nil {
+		log.Printf("\x1b[31m%s\x1b[m",err.Error())
+		n.Write([]byte("Kill yourself"))
+		return
+	} else if req.Method == "Not Provided" || req.RequestPath == "Not Provided" {
+		n.Write([]byte("Kill yourself"))
+		return
 	}
 	if req.Method == "GET" {
 		GET(req, n)
@@ -65,10 +70,10 @@ func GET(req *sstr.ReqHeader, n net.Conn) {
 	if indexfirst {
 		header := sstr.NewDefaultRespHeader(200, GetSize(rootdir+"/"+"index.html"), "text/html; charset=utf-8", "inline;", "close")
 		n.Write([]byte(header.PrepRespHeader()))
-		err := sendFile(n,rootdir+"/"+"index.html")
-		if err!=nil{
-			err = sendFile(n,rootdir+"/"+"index.html")
-			if err != nil{
+		err := sendFile(n, rootdir+"/"+"index.html")
+		if err != nil {
+			err = sendFile(n, rootdir+"/"+"index.html")
+			if err != nil {
 				log.Println(err.Error())
 			}
 		}
