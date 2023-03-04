@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
@@ -14,14 +15,18 @@ import (
 // Sorry for copy pasting
 const (
 	// Set root directory here
-	rootdir            = "./rootdir/"
+	rootdir = "./rootdir/"
 	// Allow HTMl directory listing
 	allowdirectoryview = true
 	// Will always serve index.html from rootdir when asking for /
-	indexfirst         = false
+	indexfirst = false
 	// Set port ofc
-	port               = ":80"
+	port     = ":443"
+	// Certificate and key path i self signed one and it works okay ig
+	certFile = "./cert.pem"
+	keyFile  = "./key.pem"
 )
+
 // func
 func GetSize(p string) int {
 	f, e := os.Stat(p)
@@ -37,25 +42,38 @@ func Checkerr(err error) {
 	}
 }
 func main() {
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		log.Fatalf("Failed to load TLS certificate: %s", err)
+	}
+
+	config := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+	}
+
 	ln, err := net.Listen("tcp", port)
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatalf("Failed to listen on port %s: %s", port, err)
 	}
-	fmt.Printf("\x1b[32mSucessfully listening on %s!\x1b[m\n", port)
+
+	tlsListener := tls.NewListener(ln, config)
+	fmt.Printf("\x1b[32mSucessfully started a server on %s\x1b[m\n",port)
 	for {
-		acp, err := ln.Accept()
+		conn, err := tlsListener.Accept()
 		if err != nil {
-			log.Println(err.Error())
+			log.Printf("Failed to accept connection: %s", err)
 			continue
 		}
-		DefaultHandler(acp)
+
+		// Handle the connection
+		go DefaultHandler(conn)
 	}
 }
 func DefaultHandler(n net.Conn) {
 	req, err := sstr.ParseReqHeadersbyString(n)
 	// Funni
 	if err != nil {
-		log.Printf("\x1b[31m%s\x1b[m",err.Error())
+		log.Printf("\x1b[31m%s\x1b[m", err.Error())
 		n.Write([]byte("Kill yourself"))
 		return
 	} else if req.Method == "Not Provided" || req.RequestPath == "Not Provided" {
