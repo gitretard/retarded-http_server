@@ -52,9 +52,9 @@ func HTMLDirList(pathto string, a string) string {
 		log.Printf("%v %v\n" + err.Error())
 	}
 	if len(filesListRaw) == 0 {
-		return "<!DOCTYPE html><body style=\"background-color:black\"><p style=\"color: white;font-size:20px;\"><b>No files are found in " + pathto + " </b></p></body>"
+		return "<!DOCTYPE html><body style=\"background-color:black\"><p style=\"color: white;font-size:1cm;\"><b>No files are found in " + pathto + " </b></p></body>"
 	}
-	filesList := "<!DOCTYPE html><body style=\"background-color:black\"><p style=\"color: white;font-size:20px;\"><b>Index of " + pathto + "</b></p>"
+	filesList := "<!DOCTYPE html><body style=\"background-color:black\"><p style=\"color: white;font-size:1cm;\"><b>Index of " + a + "</b></p>"
 	for index, file := range filesListRaw {
 		link := a
 		if !strings.HasSuffix(link, "/") {
@@ -62,8 +62,7 @@ func HTMLDirList(pathto string, a string) string {
 		}
 		link += file.Name()
 
-		fmt.Println(a + "/" + file.Name())
-		filesList += "<a href=\"" + link + "\"><u style=\"text-decoration-color: black;\"><p style=\"font-size: 0.6cm;color:white\">" + strconv.Itoa(index+1) + ". " + func(currfile fs.FileInfo) string {
+		filesList += "<a href=\"" + link + "\"><u style=\"text-decoration-color: black;\"><p style=\"font-size: 0.7cm;color:white\">" + strconv.Itoa(index+1) + ". " + func(currfile fs.FileInfo) string {
 			currfile.IsDir()
 			if currfile.IsDir() {
 				return "\U0001F4C1"
