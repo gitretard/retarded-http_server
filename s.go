@@ -70,7 +70,7 @@ func GET(req *sstr.ReqHeader, n net.Conn) {
 	}
 	if stat.IsDir() {
 		if allowdirectoryview {
-			header = sstr.NewDefaultRespHeader(200, len(sstr.HTMLDirList(rootdir,localpath)), "text/html; charset=utf-8", "inline;", "close")
+			header = sstr.NewDefaultRespHeader(200, len(sstr.HTMLDirList(rootdir,req.RequestPath)), "text/html; charset=utf-8", "inline;", "close")
 			headerts := header.PrepRespHeader()
 			fmt.Printf("Sent Header:\x1b[34m\n%s\x1b[m", headerts)
 			n.Write([]byte(headerts + sstr.HTMLDirList(rootdir,localpath)))

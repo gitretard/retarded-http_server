@@ -45,48 +45,52 @@ type RespHeader struct {
 var Mediasoundext = []string{".m4a", ".opus", ".flac", ".wav", ".mp3", ".m4b"}
 var Vidext = []string{".mp4", ".mkv", ".ogg", ".avi", ".mpeg", ".svi", ".mov", ".flv", ".f4v", ".webm"}
 var Imgex = []string{".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico", ".bmp"}
-func HTMLDirList(pathto string,a string) string {
-    filesListRaw, err := ioutil.ReadDir("./"+ pathto + a)
-    if err != nil {
-        log.Printf("%v\n" + err.Error())
-    }
-    if len(filesListRaw) == 0 {
-        return "<!DOCTYPE html><body style=\"background-color:black\"><p style=\"color: white;font-size:20px;\"><b>No files are found in "+pathto+" </b></p></body>"
-    }
-    filesList := "<!DOCTYPE html><body style=\"background-color:black\"><p style=\"color: white;font-size:20px;\"><b>Index of " + pathto + "</b></p>"
-    for index, file := range filesListRaw {
-        filesList += "<a href=\"" + a + "\"><u style=\"text-decoration-color: black;\"><p style=\"font-size: 0.6cm;color:white\">" + strconv.Itoa(index+1) + ". " + func(currfile fs.FileInfo) string {
-            currfile.IsDir()
-            if currfile.IsDir() {
-                return "\U0001F4C1"
-            } else {
-                for _, ex := range Imgex {
-                    if filepath.Ext(currfile.Name()) == ex {
-                        return "\U0001f5bc"
-                    }
-                }
-                for _, ex := range Mediasoundext {
-                    if filepath.Ext(currfile.Name()) == ex {
-                        return "\U0001f3b5"
-                    }
-                }
-                for _, ex := range Vidext {
-                    if filepath.Ext(currfile.Name()) == ex {
-                        return "▶️"
-                    }
-                }
-                return "\U0001F4C4"
-            }
-        }(file) + "<b>" + file.Name() + " </b>" + "</p></u></a><br>"
-    }
-    filesList += "</body>"
-    return filesList
+
+func HTMLDirList(pathto string, a string) string {
+	filesListRaw, err := ioutil.ReadDir("./" + pathto + a)
+	fmt.Printf("\n%v %v", pathto, a)
+	if err != nil {
+		log.Printf("%v %v\n" + err.Error())
+	}
+	if len(filesListRaw) == 0 {
+		return "<!DOCTYPE html><body style=\"background-color:black\"><p style=\"color: white;font-size:20px;\"><b>No files are found in " + pathto + " </b></p></body>"
+	}
+	filesList := "<!DOCTYPE html><body style=\"background-color:black\"><p style=\"color: white;font-size:20px;\"><b>Index of " + pathto + "</b></p>"
+	for index, file := range filesListRaw {
+		link := a
+		if !strings.HasSuffix(link, "/") {
+			link += "/"
+		}
+		link += file.Name()
+
+		fmt.Println(a + "/" + file.Name())
+		filesList += "<a href=\"" + link + "\"><u style=\"text-decoration-color: black;\"><p style=\"font-size: 0.6cm;color:white\">" + strconv.Itoa(index+1) + ". " + func(currfile fs.FileInfo) string {
+			currfile.IsDir()
+			if currfile.IsDir() {
+				return "\U0001F4C1"
+			} else {
+				for _, ex := range Imgex {
+					if filepath.Ext(currfile.Name()) == ex {
+						return "\U0001f5bc"
+					}
+				}
+				for _, ex := range Mediasoundext {
+					if filepath.Ext(currfile.Name()) == ex {
+						return "\U0001f3b5"
+					}
+				}
+				for _, ex := range Vidext {
+					if filepath.Ext(currfile.Name()) == ex {
+						return "▶️"
+					}
+				}
+				return "\U0001F4C4"
+			}
+		}(file) + "<b>" + file.Name() + " </b>" + "</p></u></a><br>"
+	}
+	filesList += "</body>"
+	return filesList
 }
-
-
-
-
-
 
 func RetDefaultTime() string {
 	loc, _ := time.LoadLocation("Asia/Bangkok")
