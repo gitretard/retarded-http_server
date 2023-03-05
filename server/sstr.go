@@ -3,12 +3,7 @@ package sstr
 import (
 	"errors"
 	"fmt"
-	"io/fs"
-	"io/ioutil"
-	"log"
 	"net"
-	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -47,55 +42,6 @@ type RespHeader struct {
 	ContentType        string
 	ContentDisposition string
 	ConnectionType     string
-}
-
-// Feels kinda clunky sorry for that
-var Mediasoundext = []string{".m4a", ".opus", ".flac", ".wav", ".mp3", ".m4b"}
-var Vidext = []string{".mp4", ".mkv", ".ogg", ".avi", ".mpeg", ".svi", ".mov", ".flv", ".f4v", ".webm"}
-var Imgex = []string{".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico", ".bmp"}
-
-func HTMLDirList(pathto string, a string) string {
-	filesListRaw, err := ioutil.ReadDir("./" + pathto + a)
-	if err != nil {
-		log.Printf("%v %v\n" + err.Error())
-	}
-	if len(filesListRaw) == 0 {
-		return "<!DOCTYPE html><body style=\"background-color:black\"><p style=\"color: white;font-size:1cm;\"><b>No files are found in " + pathto + " </b></p></body>"
-	}
-	filesList := "<!DOCTYPE html><body style=\"background-color:black\"><p style=\"color: white;font-size:1cm;\"><b>Index of " + a + "</b></p>"
-	for index, file := range filesListRaw {
-		link := a
-		if !strings.HasSuffix(link, "/") {
-			link += "/"
-		}
-		link += file.Name()
-
-		filesList += "<a href=\"" + link + "\"><u style=\"text-decoration-color: black;\"><p style=\"font-size: 0.7cm;color:white\">" + strconv.Itoa(index+1) + ". " + func(currfile fs.FileInfo) string {
-			currfile.IsDir()
-			if currfile.IsDir() {
-				return "\U0001F4C1"
-			} else {
-				for _, ex := range Imgex {
-					if filepath.Ext(currfile.Name()) == ex {
-						return "\U0001f5bc"
-					}
-				}
-				for _, ex := range Mediasoundext {
-					if filepath.Ext(currfile.Name()) == ex {
-						return "\U0001f3b5"
-					}
-				}
-				for _, ex := range Vidext {
-					if filepath.Ext(currfile.Name()) == ex {
-						return "▶️"
-					}
-				}
-				return "\U0001F4C4"
-			}
-		}(file) + "<b>" + file.Name() + " </b>" + "</p></u></a><br>"
-	}
-	filesList += "</body>"
-	return filesList
 }
 
 // Returns the time in HTTP format
@@ -138,60 +84,6 @@ func NewDefaultRespHeader(status int, size int, mimetype string, dispositiontype
 	h.ContentDisposition = dispositiontype
 	h.ConnectionType = conntype
 	return h
-}
-
-// Ofc mime types (More popular browsers can handle wrong mime types some dont)
-var mimeTypes = map[string]string{
-	".aac":   "audio/aac",
-	".avi":   "video-x-msvideo",
-	".bz":    "application/x-bzip",
-	".bz2":   "application/x-bzip2",
-	".csh":   "application/x-csh",
-	".css":   "text/css",
-	".doc":   "application/msword",
-	".docx":  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-	".gif":   "image/gif",
-	".html":  "text/html",
-	".htm":   "text/html",
-	".ico":   "image/vnd.microsoft.icon",
-	".jar":   "application/java-archive",
-	".js":    "text/javascript",
-	".json":  "application/json",
-	".mjs":   "text/javascript",
-	".mp3":   "audio/mpeg",
-	".mp4":   "video/mp4",
-	".mpeg":  "video/mpeg",
-	".odp":   "application/vnd.oasis.opendocument.presentation",
-	".ods":   "application/vnd.oasis.opendocument.spreadsheet",
-	".odt":   "application/vnd.oasis.opendocument.text",
-	".oga":   "audio/ogg",
-	".ogv":   "video/ogg",
-	".txt":   "text/plain",
-	".otf":   "font/otf",
-	".png":   "image/png",
-	".pdf":   "application/pdf",
-	".php":   "application/x-httpd-php",
-	".ppt":   "application/vnd.ms-powerpoint",
-	".pptx":  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-	".rar":   "application/vnd.rar",
-	".rtf":   "application/rtf",
-	".sh":    "application/x-sh",
-	".svg":   "image/svg+xml",
-	".tar":   "application/x-tar",
-	".tiff":  "image/tiff",
-	".tf":    "image/tiff",
-	".ttf":   "font/ttf",
-	".wav":   "audio/wav",
-	".weba":  "audio/webm",
-	".webm":  "video/webm",
-	".webp":  "image/webp",
-	".xhtml": "application/xhtml+xml", //Why tf would anyone use this
-	".xls":   "application/vnd.ms-excel",
-	".xlsx":  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-	".xml":   "application/xml",
-	".xul":   "application/vnd.mozilla.xul+xml",
-	".zip":   "application/zip",
-	".7z":    "application/x-7z-compressed",
 }
 
 func GetMimeByExt(ext string) string {
@@ -266,19 +158,6 @@ func ParseReqHeadersbyString(n net.Conn) (*Req, error) {
 	h.Data.FormData = make(map[string]string)
 	return h, nil
 }
-
-// self explanatory
-func BadRequest400() string {
-	return "<!DOCTYPE html><head><title>400 Bad Request</title></head><body style=\"background-color: black;\"></body><h1 style=\"text-align: center;color:white;font-size: 90px\">400</h1><br><p style=\"text-align: center;color:white;font-size: 30px\"> Bad Request " + "</p></body>"
-}
-func NotFound404(pathto string) string {
-	return "<!DOCTYPE html><head><title>404 Not Found</title></head><body style=\"background-color: black;\"></body><h1 style=\"text-align: center;color:white;font-size: 90px\">404</h1><br><p style=\"text-align: center;color:white;font-size: 30px\"> The specified content is not found: " + path.Base(pathto) + "</p></body>"
-}
-func ServerErr500() string {
-	return "<!DOCTYPE html><head><title>500 Server Error!></title></head><body style=\"background-color: black;\"></body><h1 style=\"text-align: center;color:white;font-size: 90px\">404</h1><br><p style=\"text-align: center;color:white;font-size: 30px\">Internal Server Error" + "</p></body>"
-}
-
-
 func URLunescape(s string) (string, error) {
     var buf bytes.Buffer
     for i := 0; i < len(s); i++ {
