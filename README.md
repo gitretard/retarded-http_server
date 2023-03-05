@@ -16,4 +16,6 @@ Issues;
 
 5. Copypasting code
 
+6. Random EOF error logs (Its fine)
+
 unusable
