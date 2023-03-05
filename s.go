@@ -21,7 +21,7 @@ const (
 	// Will always serve index.html from rootdir when asking for /
 	indexfirst = false
 	// Set port ofc
-	port     = ":443"
+	port = ":443"
 	// Certificate and key path i self signed one and it works okay ig
 	certFile = "./cert.pem"
 	keyFile  = "./key.pem"
@@ -57,13 +57,14 @@ func main() {
 	}
 
 	tlsListener := tls.NewListener(ln, config)
-	fmt.Printf("\x1b[32mSucessfully started a server on %s\x1b[m\n",port)
+	fmt.Printf("\x1b[32mSucessfully started a server on %s\x1b[m\n", port)
 	for {
 		conn, err := tlsListener.Accept()
 		if err != nil {
 			log.Printf("Failed to accept connection: %s", err)
 			continue
 		}
+		defer conn.Close()
 
 		go DefaultHandler(conn)
 	}
@@ -79,12 +80,11 @@ func DefaultHandler(n net.Conn) {
 		n.Write([]byte("Kill yourself"))
 		return
 	}
-	/*
-	if req.Path == "/test"{
-		FormTest(req,n)
+	if req.Path == "/test" {
+		FormTest(req, n)
 		return
 	}
-	*/
+
 	if req.Method == "GET" {
 		GET(req, n)
 	}
@@ -153,16 +153,21 @@ func GET(req *sstr.Req, n net.Conn) {
 	}
 
 }
-/*
-func FormTest(req *sstr.Req,n net.Conn){
-	header := sstr.NewDefaultRespHeader(200,GetSize(rootdir+"index.html"),"text/html; charset=utf-8","inline;","keep-alive")
-	n.Write([]byte(header.PrepRespHeader()))
-	sendFile(n,rootdir+"index.html")
-	req.ParseFormData()
-	fmt.Printf("Body: %s",req.Data.FormData["text-input"])
-}*/
+
+func FormTest(req *sstr.Req, n net.Conn) {
+    if req.Method == "POST" {
+        req.ParseFormData()
+		header := sstr.AckHeader(len("tysm"))
+		fmt.Printf("\nBody: %s", req.Data.FormData["text-input"])
+        n.Write([]byte(header.PrepRespHeader()))
+		n.Write([]byte("tysm"))
+    } else {
+        header := sstr.NewDefaultRespHeader(200, GetSize(rootdir+"index.html"), "text/html; charset=utf-8", "inline;", "close;")
+        n.Write([]byte(header.PrepRespHeader()))
+        sendFile(n, rootdir+"index.html")
+    }
+}
 func sendFile(conn net.Conn, filename string) error {
-	// Open the file
 	file, err := os.Open(filename)
 	if err != nil {
 		return err
