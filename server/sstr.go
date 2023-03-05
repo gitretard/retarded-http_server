@@ -62,7 +62,6 @@ func NewDefaultRespHeader(status int, size int, mimetype string, dispositiontype
 	h := &RespHeader{}
 	h.HTTPver = "HTTP/1.1"
 	h.StatusAsint = status
-	h.StatusCode = strconv.Itoa(status)
 	switch status {
 	case 200:
 		h.StatusCode = "200 OK"
@@ -77,21 +76,13 @@ func NewDefaultRespHeader(status int, size int, mimetype string, dispositiontype
 		h.StatusCode = "501 Not implemented"
 	}
 	h.Date = RetDefaultTime()
-	h.Server = "shitserver/0.0 (MicrosoftSucksCocks32)"
+	h.Server = "shitserver/0.0"
 	h.LastModified = h.Date
 	h.ContentLength = size
 	h.ContentType = mimetype
 	h.ContentDisposition = dispositiontype
 	h.ConnectionType = conntype
 	return h
-}
-
-func GetMimeByExt(ext string) string {
-	if mime, ok := mimeTypes[ext]; ok {
-		return mime
-	} else {
-		return "application/octet-stream"
-	}
 }
 
 // Parse request headers
@@ -157,6 +148,18 @@ func ParseReqHeadersbyString(n net.Conn) (*Req, error) {
 	h.Data.Body = tmp[1]
 	h.Data.FormData = make(map[string]string)
 	return h, nil
+}
+func AckHeader(lent int) *RespHeader{
+	h := &RespHeader{}
+	h.HTTPver = "HTTP/1.1"
+	h.StatusAsint = 200
+	h.StatusCode = "200 OK"
+	h.ContentDisposition = "inline;"
+	h.Server = "shitserver/0.0"
+	h.LastModified = RetDefaultTime()
+	h.Date = RetDefaultTime()
+	h.ContentLength = lent
+	return h
 }
 func URLunescape(s string) (string, error) {
     var buf bytes.Buffer

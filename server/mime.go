@@ -55,3 +55,10 @@ var mimeTypes = map[string]string{
 	".zip":   "application/zip",
 	".7z":    "application/x-7z-compressed",
 }
+func GetMimeByExt(ext string) string {
+	if mime, ok := mimeTypes[ext]; ok {
+		return mime
+	} else {
+		return "application/octet-stream"
+	}
+}

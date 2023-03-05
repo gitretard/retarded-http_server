@@ -70,23 +70,26 @@ func main() {
 	}
 }
 func DefaultHandler(n net.Conn) {
-	req, err := sstr.ParseReqHeadersbyString(n)
-	// Funni
-	if err != nil {
-		log.Printf("\x1b[31m%s\x1b[m", err.Error())
-		n.Write([]byte("Kill yourself"))
-		return
-	} else if req.Method == "Not Provided" || req.Path == "Not Provided" {
-		n.Write([]byte("Kill yourself"))
-		return
-	}
-	if req.Path == "/test" {
-		FormTest(req, n)
-		return
-	}
-
-	if req.Method == "GET" {
-		GET(req, n)
+	for {
+		req, err := sstr.ParseReqHeadersbyString(n)
+		// Funni
+		if err != nil {
+			log.Printf("\x1b[31m%s\x1b[m", err.Error())
+			n.Write([]byte("Kill yourself"))
+			return
+		} else if req.Method == "Not Provided" || req.Path == "Not Provided" {
+			n.Write([]byte("Kill yourself"))
+			return
+		}
+		/*
+		if req.Method == "POST" {
+			FormTest(req, n)
+			return
+		}
+		*/
+		if req.Method == "GET" {
+			GET(req, n)
+		}
 	}
 }
 
@@ -153,20 +156,20 @@ func GET(req *sstr.Req, n net.Conn) {
 	}
 
 }
-
+/*
 func FormTest(req *sstr.Req, n net.Conn) {
-    if req.Method == "POST" {
-        req.ParseFormData()
-		header := sstr.AckHeader(len("tysm"))
+	if req.Method == "POST" {
+		req.ParseFormData()
+		header := sstr.AckHeader(0)
 		fmt.Printf("\nBody: %s", req.Data.FormData["text-input"])
-        n.Write([]byte(header.PrepRespHeader()))
-		n.Write([]byte("tysm"))
-    } else {
-        header := sstr.NewDefaultRespHeader(200, GetSize(rootdir+"index.html"), "text/html; charset=utf-8", "inline;", "close;")
-        n.Write([]byte(header.PrepRespHeader()))
-        sendFile(n, rootdir+"index.html")
-    }
+		n.Write([]byte(header.PrepRespHeader()))
+	} else {
+		header := sstr.NewDefaultRespHeader(200, GetSize(rootdir+"index.html"), "text/html; charset=utf-8", "inline;", "close;")
+		n.Write([]byte(header.PrepRespHeader()))
+		sendFile(n, rootdir+"index.html")
+	}
 }
+*/
 func sendFile(conn net.Conn, filename string) error {
 	file, err := os.Open(filename)
 	if err != nil {
