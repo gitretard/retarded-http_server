@@ -25,6 +25,8 @@ const (
 	// Certificate and key path i self signed one and it works okay ig
 	certFile = "./cert.pem"
 	keyFile  = "./key.pem"
+	// test stuff
+	ts = true
 )
 
 // func
@@ -41,8 +43,8 @@ func Checkerr(err error) {
 		log.Printf("\n" + err.Error())
 	}
 }
-func sendFile(conn net.Conn, filename string) error {
-	file, err := os.Open(filename)
+func sendFile(conn net.Conn,p string) error {
+	file, err := os.Open(p)
 	if err != nil {
 		return err
 	}
@@ -59,7 +61,8 @@ func sendFile(conn net.Conn, filename string) error {
 func main() {
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
-		log.Fatalf("Failed to load TLS certificate: %s", err)
+		log.Fatalf("\x1b[31mFailed to load TLS certificate: %s\x1b[m\n", err)
+		return
 	}
 
 	config := &tls.Config{
@@ -68,16 +71,17 @@ func main() {
 
 	ln, err := net.Listen("tcp", port)
 	if err != nil {
-		log.Fatalf("Failed to listen on port %s: %s", port, err)
+		log.Fatalf("\x1b[31m[-]Failed to listen on port %s: %s\x1b[m\n", port, err)
+		return
 	}
 
 	tlsListener := tls.NewListener(ln, config)
 	defer tlsListener.Close()
-	fmt.Printf("\x1b[32mSucessfully started a server on %s\x1b[m\n", port)
+	fmt.Printf("\x1b[32m[+]Sucessfully started a server on %s\x1b[m\n", port)
 	for {
 		conn, err := tlsListener.Accept()
 		if err != nil {
-			log.Printf("Failed to accept connection: %s", err)
+			log.Printf("\x1b[31mFailed to accept connection: %s\x1b[31m\n", err)
 			continue
 		}
 		defer conn.Close()
@@ -90,23 +94,23 @@ func DefaultHandler(n net.Conn) {
 		req, err := sstr.ParseReqHeadersbyString(n)
 		// Funni
 		if err != nil {
-			log.Printf("\x1b[31m%s\x1b[m", err.Error())
+			/*log.Printf("\x1b[31m%s\x1b[m", err.Error()) The only place where a red error log appears as of editing rn i will add soon this may be the culprit of the EOF error idk why*/
 			n.Write([]byte("Kill yourself"))
 			return
 		} else if req.Method == "Not Provided" || req.Path == "Not Provided" {
 			n.Write([]byte("Kill yourself"))
 			return
 		}
-		if req.Connection == "close"{
+		if req.Connection == "close" {
 			n.Close()
 			return
 		}
-		/*
-		if req.Method == "POST" {
-			FormTest(req, n)
-			return
+		if ts {
+			if req.Method == "POST" {
+				FormTest(req, n)
+				return
+			}
 		}
-		*/
 		if req.Method == "GET" {
 			GET(req, n)
 		}
@@ -177,17 +181,16 @@ func GET(req *sstr.Req, n net.Conn) {
 	}
 
 }
-/*
 func FormTest(req *sstr.Req, n net.Conn) {
 	if req.Method == "POST" {
 		req.ParseFormData()
-		header := sstr.AckHeader(0)
-		fmt.Printf("\nBody: %s", req.Data.FormData["text-input"])
+		fmt.Printf("\nBody: %s\n", req.Data.FormData["text-input"])
+		header := sstr.NewDefaultRespHeader(200,GetSize(rootdir+"index.html"),"text/html; charset=utf8","inline","keep-alive")
 		n.Write([]byte(header.PrepRespHeader()))
+		sendFile(n,rootdir+"index.html")
 	} else {
-		header := sstr.NewDefaultRespHeader(200, GetSize(rootdir+"index.html"), "text/html; charset=utf-8", "inline;", "close;")
+		header := sstr.NewDefaultRespHeader(200, GetSize(rootdir+"index.html"), "text/html; charset=utf-8", "inline;", "keep-alive;")
 		n.Write([]byte(header.PrepRespHeader()))
 		sendFile(n, rootdir+"index.html")
 	}
 }
-*/

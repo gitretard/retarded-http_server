@@ -6,7 +6,7 @@ Still not even good enough for my personal use imma fix it later
 
 Issues;
 
-1. Nil pointers (Happens sometimes and crashes teh entire server also idk hwo to fix it)
+1. Nil pointers (Happens sometimes and crashes the entire server also idk how to fix it)
 
 2. Some connection issues (mostly during form requests)
 
@@ -14,7 +14,10 @@ Issues;
 
 4. Random errors idk how to fix it but it doesnt crash the entire program so who cares
 
-5. Copypasting code
+5. Awful code
+
+6. Naming issues (canoot open files with special characters like ^%#*^@*$^#@*) also idk why
+
 
 
 unusable
