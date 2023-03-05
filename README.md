@@ -6,8 +6,14 @@ Still not even good enough for my personal use imma fix it later
 
 Issues;
 
-Nil pointers (Happens sometimes and crashes teh entire server also idk hwo to fix it)
+1. Nil pointers (Happens sometimes and crashes teh entire server also idk hwo to fix it)
 
-Connection issues (Connection is closed? and how do i hold the connection?)
+2. Some connection issues (mostly during form requests)
+
+3. Goroutine leaks
+
+4. Random errors idk how to fix it but it doesnt crash the entire program so who cares
+
+5. Copypasting code
 
 unusable
