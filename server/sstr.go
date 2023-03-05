@@ -12,9 +12,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"bytes"
 )
+
 // structs for yknow
-type ReqHeader struct { // string strings  strings.... Also more header fields with be supported
+type Req struct { // string strings  strings.... Also more header fields with be supported
 	HTTPver        string
 	AcceptType     string
 	AcceptCharset  string
@@ -22,11 +24,17 @@ type ReqHeader struct { // string strings  strings.... Also more header fields w
 	AcceptEncoding string
 	AcceptLanguage string
 	Connection     string
+	ContentLength  int
 	From           string
 	Host           string
 	Method         string
-	RequestPath    string
+	Path    string
 	UserAgent      string
+	CurrentConnection  net.Conn // haha very secure
+	Data struct{
+		FormData map[string]string
+		Body string
+	}
 }
 type RespHeader struct {
 	HTTPver            string
@@ -89,17 +97,20 @@ func HTMLDirList(pathto string, a string) string {
 	filesList += "</body>"
 	return filesList
 }
+
 // Returns the time in HTTP format
 func RetDefaultTime() string {
 	loc, _ := time.LoadLocation("Asia/Bangkok") // Set your locale here?
 	time.Local = loc
 	return time.Now().Format("Mon, 02 Jan 2006 15:04:05 GMT")
 }
+
 // Compiles the header
 func (h *RespHeader) PrepRespHeader() string {
 	compiled := fmt.Sprintf("%s %s\r\nDate: %s\r\nServer: %s\r\nLast-Modified: %s\r\nContent-Length: %d\r\nContent-Type: %s\r\nContent-Disposition: %s\r\nConnection: %s\r\n\r\n", h.HTTPver, h.StatusCode, h.Date, h.Server, h.LastModified, h.ContentLength, h.ContentType, h.ContentDisposition, h.ConnectionType)
 	return compiled
 }
+
 // New response
 func NewDefaultRespHeader(status int, size int, mimetype string, dispositiontype, conntype string) *RespHeader {
 	h := &RespHeader{}
@@ -128,6 +139,7 @@ func NewDefaultRespHeader(status int, size int, mimetype string, dispositiontype
 	h.ConnectionType = conntype
 	return h
 }
+
 // Ofc mime types (More popular browsers can handle wrong mime types some dont)
 var mimeTypes = map[string]string{
 	".aac":   "audio/aac",
@@ -189,8 +201,9 @@ func GetMimeByExt(ext string) string {
 		return "application/octet-stream"
 	}
 }
+
 // Parse request headers
-func ParseReqHeadersbyString(n net.Conn) (*ReqHeader, error) {
+func ParseReqHeadersbyString(n net.Conn) (*Req, error) {
 	headerbuf := make([]byte, 8190)
 	length, err := n.Read(headerbuf)
 	if err != nil {
@@ -201,7 +214,7 @@ func ParseReqHeadersbyString(n net.Conn) (*ReqHeader, error) {
 	}
 	headerstring := string(headerbuf)
 	lines := strings.Split(headerstring, "\r\n")
-	h := &ReqHeader{
+	h := &Req{
 		HTTPver:        "Not Provided",
 		AcceptType:     "Not Provided",
 		AcceptCharset:  "Not Provided",
@@ -212,7 +225,7 @@ func ParseReqHeadersbyString(n net.Conn) (*ReqHeader, error) {
 		From:           "Not Provided",
 		Host:           "Not Provided",
 		Method:         "Not Provided",
-		RequestPath:    "Not Provided",
+		Path:    "Not Provided",
 		UserAgent:      "Not Provided",
 	}
 	for i, line := range lines {
@@ -222,7 +235,7 @@ func ParseReqHeadersbyString(n net.Conn) (*ReqHeader, error) {
 		fields := strings.Split(line, " ")
 		if i == 0 && len(fields) >= 3 {
 			h.Method = fields[0]
-			h.RequestPath = fields[1]
+			h.Path = fields[1]
 			h.HTTPver = fields[2]
 		} else if len(fields) >= 2 {
 			switch strings.ToLower(fields[0]) {
@@ -245,10 +258,15 @@ func ParseReqHeadersbyString(n net.Conn) (*ReqHeader, error) {
 			case "accept-datetime:":
 				h.AcceptDatetime = strings.Join(fields[1:], " ")
 			}
+
 		}
 	}
+	tmp := strings.Split(headerstring,"\r\n\r\n")
+	h.Data.Body = tmp[1]
+	h.Data.FormData = make(map[string]string)
 	return h, nil
 }
+
 // self explanatory
 func BadRequest400() string {
 	return "<!DOCTYPE html><head><title>400 Bad Request</title></head><body style=\"background-color: black;\"></body><h1 style=\"text-align: center;color:white;font-size: 90px\">400</h1><br><p style=\"text-align: center;color:white;font-size: 30px\"> Bad Request " + "</p></body>"
@@ -258,4 +276,31 @@ func NotFound404(pathto string) string {
 }
 func ServerErr500() string {
 	return "<!DOCTYPE html><head><title>500 Server Error!></title></head><body style=\"background-color: black;\"></body><h1 style=\"text-align: center;color:white;font-size: 90px\">404</h1><br><p style=\"text-align: center;color:white;font-size: 30px\">Internal Server Error" + "</p></body>"
+}
+
+
+func URLunescape(s string) (string, error) {
+    var buf bytes.Buffer
+    for i := 0; i < len(s); i++ {
+        switch s[i] {
+        case '%':
+            if i+2 >= len(s) {
+                return "", errors.New("Malformed URL-encoded string")
+            }
+            b1 := s[i+1]
+            b2 := s[i+2]
+            hexStr := string([]byte{b1, b2})
+            hexValue, err := strconv.ParseUint(hexStr, 16, 8)
+            if err != nil {
+                return "", err
+            }
+            buf.WriteByte(byte(hexValue))
+            i += 2
+        case '+':
+            buf.WriteByte(' ')
+        default:
+            buf.WriteByte(s[i])
+        }
+    }
+    return buf.String(), nil
 }

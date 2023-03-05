@@ -65,7 +65,6 @@ func main() {
 			continue
 		}
 
-		// Handle the connection
 		go DefaultHandler(conn)
 	}
 }
@@ -76,20 +75,26 @@ func DefaultHandler(n net.Conn) {
 		log.Printf("\x1b[31m%s\x1b[m", err.Error())
 		n.Write([]byte("Kill yourself"))
 		return
-	} else if req.Method == "Not Provided" || req.RequestPath == "Not Provided" {
+	} else if req.Method == "Not Provided" || req.Path == "Not Provided" {
 		n.Write([]byte("Kill yourself"))
 		return
 	}
+	/*
+	if req.Path == "/test"{
+		FormTest(req,n)
+		return
+	}
+	*/
 	if req.Method == "GET" {
 		GET(req, n)
 	}
 }
 
 // Very ugly code sorry for that
-func GET(req *sstr.ReqHeader, n net.Conn) {
-	localpath, err := url.QueryUnescape(req.RequestPath)
+func GET(req *sstr.Req, n net.Conn) {
+	localpath, err := url.QueryUnescape(req.Path)
 	Checkerr(err)
-	fmt.Printf("\x1b[32mFrom: \x1b[33m%s\n%s %s %s\x1b[m\n\x1b[32mUser-Agent: \x1b[33m%s\x1b[m\n\x1b[32mAccepted types: \x1b[33m%s\x1b[m\n\n", n.RemoteAddr(), req.Method, req.RequestPath, req.HTTPver, req.UserAgent, req.AcceptType)
+	fmt.Printf("\x1b[32mFrom: \x1b[33m%s\n%s %s %s\x1b[m\n\x1b[32mUser-Agent: \x1b[33m%s\x1b[m\n\x1b[32mAccepted types: \x1b[33m%s\x1b[m\n\n", n.RemoteAddr(), req.Method, req.Path, req.HTTPver, req.UserAgent, req.AcceptType)
 	if indexfirst {
 		header := sstr.NewDefaultRespHeader(200, GetSize(rootdir+"/"+"index.html"), "text/html; charset=utf-8", "inline;", "close")
 		n.Write([]byte(header.PrepRespHeader()))
@@ -102,7 +107,7 @@ func GET(req *sstr.ReqHeader, n net.Conn) {
 		}
 		return
 	}
-	if req.RequestPath == "Not Provided" {
+	if req.Path == "Not Provided" {
 		header := sstr.NewDefaultRespHeader(400, len(sstr.BadRequest400()), "text/html", "inline;", "close")
 		headerts := header.PrepRespHeader()
 		fmt.Printf("Sent Header:\n\x1b[34m%s\x1b[m", headerts)
@@ -119,25 +124,25 @@ func GET(req *sstr.ReqHeader, n net.Conn) {
 	}
 	if stat.IsDir() {
 		if allowdirectoryview {
-			header := sstr.NewDefaultRespHeader(200, len(sstr.HTMLDirList(rootdir, req.RequestPath)), "text/html; charset=utf-8", "inline;", "close")
+			header := sstr.NewDefaultRespHeader(200, len(sstr.HTMLDirList(rootdir, req.Path)), "text/html; charset=utf-8", "inline;", "close")
 			headerts := header.PrepRespHeader()
 			fmt.Printf("Sent Header:\x1b[34m\n%s\x1b[m", headerts)
 			n.Write([]byte(headerts + sstr.HTMLDirList(rootdir, localpath)))
 			return
 		} else {
-			header := sstr.NewDefaultRespHeader(404, len(sstr.NotFound404(req.RequestPath)), "text/html", "inline;", "close")
+			header := sstr.NewDefaultRespHeader(404, len(sstr.NotFound404(req.Path)), "text/html", "inline;", "close")
 			headerts := header.PrepRespHeader()
 			fmt.Printf("Sent Header:\n\x1b[34m%s\x1b[m", headerts)
-			n.Write([]byte(headerts + sstr.NotFound404(req.RequestPath)))
+			n.Write([]byte(headerts + sstr.NotFound404(req.Path)))
 			return
 		}
 	} else {
-		ftype := sstr.GetMimeByExt(filepath.Ext(rootdir + req.RequestPath))
+		ftype := sstr.GetMimeByExt(filepath.Ext(rootdir + req.Path))
 		header := sstr.NewDefaultRespHeader(200, int(stat.Size()), ftype, "inline", "keep-alive")
 		headerts := header.PrepRespHeader()
 		fmt.Printf("Sent Header:\n\x1b[34m%s\x1b[m", headerts)
 		n.Write([]byte(headerts))
-		err = sendFile(n, rootdir+req.RequestPath)
+		err = sendFile(n, rootdir+req.Path)
 		if err != nil {
 			log.Printf("%v\n" + err.Error())
 			header = sstr.NewDefaultRespHeader(500, len(sstr.ServerErr500()), "text/html; charset=utf-8", "inline;", "close")
@@ -148,6 +153,14 @@ func GET(req *sstr.ReqHeader, n net.Conn) {
 	}
 
 }
+/*
+func FormTest(req *sstr.Req,n net.Conn){
+	header := sstr.NewDefaultRespHeader(200,GetSize(rootdir+"index.html"),"text/html; charset=utf-8","inline;","keep-alive")
+	n.Write([]byte(header.PrepRespHeader()))
+	sendFile(n,rootdir+"index.html")
+	req.ParseFormData()
+	fmt.Printf("Body: %s",req.Data.FormData["text-input"])
+}*/
 func sendFile(conn net.Conn, filename string) error {
 	// Open the file
 	file, err := os.Open(filename)
