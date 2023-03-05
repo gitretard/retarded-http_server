@@ -41,6 +41,21 @@ func Checkerr(err error) {
 		log.Printf("\n" + err.Error())
 	}
 }
+func sendFile(conn net.Conn, filename string) error {
+	file, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Copy the file to the network connection
+	_, err = io.Copy(conn, file)
+	if err != nil && err.Error() != io.EOF.Error() {
+		return err
+	}
+
+	return nil
+}
 func main() {
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
@@ -176,18 +191,3 @@ func FormTest(req *sstr.Req, n net.Conn) {
 	}
 }
 */
-func sendFile(conn net.Conn, filename string) error {
-	file, err := os.Open(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	// Copy the file to the network connection
-	_, err = io.Copy(conn, file)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
