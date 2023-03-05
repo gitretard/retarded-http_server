@@ -80,10 +80,11 @@ func DefaultHandler(n net.Conn) {
 		n.Write([]byte("Kill yourself"))
 		return
 	}
+	/*
 	if req.Path == "/test" {
 		FormTest(req, n)
 		return
-	}
+	}*/
 
 	if req.Method == "GET" {
 		GET(req, n)
@@ -153,7 +154,7 @@ func GET(req *sstr.Req, n net.Conn) {
 	}
 
 }
-
+/*
 func FormTest(req *sstr.Req, n net.Conn) {
     if req.Method == "POST" {
         req.ParseFormData()
@@ -166,7 +167,7 @@ func FormTest(req *sstr.Req, n net.Conn) {
         n.Write([]byte(header.PrepRespHeader()))
         sendFile(n, rootdir+"index.html")
     }
-}
+}*/
 func sendFile(conn net.Conn, filename string) error {
 	file, err := os.Open(filename)
 	if err != nil {
