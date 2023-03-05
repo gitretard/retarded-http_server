@@ -3,3 +3,9 @@ You can change the root directory and if you allow directory listings or not BUT
 
 
 Still not even good enough for my personal use imma fix it later
+
+Issues;
+
+Nil pointers (Happens sometimes and crashes teh entire server also idk hwo to fix it)
+
+unusable
