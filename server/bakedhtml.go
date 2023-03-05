@@ -24,7 +24,7 @@ func HTMLDirList(pathto string, a string) string {
 		}
 		link += file.Name()
 
-		filesList += "<a href=\"" + link + "\"><u style=\"text-decoration-color: black;\"><p style=\"font-size: 0.7cm;color:white\">" + strconv.Itoa(index+1) + ". " + func(currfile fs.FileInfo) string {
+		filesList += "<a href=\"" + link + "\"><u style=\"text-decoration-color: black;line-height: 0.01;\"><p style=\"font-size: 0.7cm;color:white;line-height: 0.01;\">" + strconv.Itoa(index+1) + ". " + func(currfile fs.FileInfo) string {
 			currfile.IsDir()
 			if currfile.IsDir() {
 				return "\U0001F4C1"
