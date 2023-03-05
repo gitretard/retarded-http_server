@@ -57,6 +57,7 @@ func main() {
 	}
 
 	tlsListener := tls.NewListener(ln, config)
+	defer tlsListener.Close()
 	fmt.Printf("\x1b[32mSucessfully started a server on %s\x1b[m\n", port)
 	for {
 		conn, err := tlsListener.Accept()
@@ -79,6 +80,10 @@ func DefaultHandler(n net.Conn) {
 			return
 		} else if req.Method == "Not Provided" || req.Path == "Not Provided" {
 			n.Write([]byte("Kill yourself"))
+			return
+		}
+		if req.Connection == "close"{
+			n.Close()
 			return
 		}
 		/*
@@ -153,6 +158,7 @@ func GET(req *sstr.Req, n net.Conn) {
 			fmt.Printf("Sent Header:\n\n\x1b[34m%s\x1b[m", headerts)
 			n.Write([]byte(headerts + sstr.ServerErr500()))
 		}
+		return
 	}
 
 }
