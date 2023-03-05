@@ -8,6 +8,6 @@ Issues;
 
 Nil pointers (Happens sometimes and crashes teh entire server also idk hwo to fix it)
 
-Connection issues (Connectio nis closed? and how do i hold the connection?)
+Connection issues (Connection is closed? and how do i hold the connection?)
 
 unusable
