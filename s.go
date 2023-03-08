@@ -91,7 +91,7 @@ func main() {
 }
 func DefaultHandler(n net.Conn) {
 	for {
-		req, err := sstr.ParseReqHeadersbyString(n)
+		req, err := std.ParseReqHeadersbyString(n)
 		// Funni
 		if err != nil {
 			/*log.Printf("\x1b[31m%s\x1b[m", err.Error()) The only place where a red error log appears as of editing rn i will add soon this may be the culprit of the EOF error idk why*/
@@ -118,12 +118,12 @@ func DefaultHandler(n net.Conn) {
 }
 
 // Very ugly code sorry for that
-func GET(req *sstr.Req, n net.Conn) {
+func GET(req *std.Req, n net.Conn) {
 	localpath, err := url.QueryUnescape(req.Path)
 	Checkerr(err)
 	fmt.Printf("\x1b[32mFrom: \x1b[33m%s\n%s %s %s\x1b[m\n\x1b[32mUser-Agent: \x1b[33m%s\x1b[m\n\x1b[32mAccepted types: \x1b[33m%s\x1b[m\n\n", n.RemoteAddr(), req.Method, req.Path, req.HTTPver, req.UserAgent, req.AcceptType)
 	if indexfirst {
-		header := sstr.NewDefaultRespHeader(200, GetSize(rootdir+"/"+"index.html"), "text/html; charset=utf-8", "inline;", "close")
+		header := std.NewDefaultRespHeader(200, GetSize(rootdir+"/"+"index.html"), "text/html; charset=utf-8", "inline;", "close")
 		n.Write([]byte(header.PrepRespHeader()))
 		err := sendFile(n, rootdir+"/"+"index.html")
 		if err != nil {
@@ -135,61 +135,58 @@ func GET(req *sstr.Req, n net.Conn) {
 		return
 	}
 	if req.Path == "Not Provided" {
-		header := sstr.NewDefaultRespHeader(400, len(sstr.BadRequest400()), "text/html", "inline;", "close")
+		header := std.NewDefaultRespHeader(400, len(std.BadRequest400()), "text/html", "inline;", "close")
 		headerts := header.PrepRespHeader()
 		fmt.Printf("Sent Header:\n\x1b[34m%s\x1b[m", headerts)
-		n.Write([]byte(headerts + sstr.BadRequest400()))
+		n.Write([]byte(headerts + std.BadRequest400()))
 		return
 	}
 	stat, err := os.Stat(rootdir + localpath)
 	if err != nil {
-		header := sstr.NewDefaultRespHeader(404, len(sstr.NotFound404(localpath)), "text/html; charset=utf-8", "inline;", "close")
+		header := std.NewDefaultRespHeader(404, len(std.NotFound404(localpath)), "text/html; charset=utf-8", "inline;", "close")
 		headerts := header.PrepRespHeader()
 		fmt.Printf("Sent Header:\n\x1b[34m%s\x1b[m", headerts)
-		n.Write([]byte(headerts + sstr.NotFound404(localpath)))
+		n.Write([]byte(headerts + std.NotFound404(localpath)))
 		return
 	}
 	if stat.IsDir() {
 		if allowdirectoryview {
-			header := sstr.NewDefaultRespHeader(200, len(sstr.HTMLDirList(rootdir, req.Path)), "text/html; charset=utf-8", "inline;", "close")
+			header := std.NewDefaultRespHeader(200, len(std.HTMLDirList(rootdir, req.Path)), "text/html; charset=utf-8", "inline;", "close")
 			headerts := header.PrepRespHeader()
 			fmt.Printf("Sent Header:\x1b[34m\n%s\x1b[m", headerts)
-			n.Write([]byte(headerts + sstr.HTMLDirList(rootdir, localpath)))
+			n.Write([]byte(headerts + std.HTMLDirList(rootdir, localpath)))
 			return
 		} else {
-			header := sstr.NewDefaultRespHeader(404, len(sstr.NotFound404(req.Path)), "text/html", "inline;", "close")
+			header := std.NewDefaultRespHeader(404, len(std.NotFound404(req.Path)), "text/html", "inline;", "close")
 			headerts := header.PrepRespHeader()
 			fmt.Printf("Sent Header:\n\x1b[34m%s\x1b[m", headerts)
-			n.Write([]byte(headerts + sstr.NotFound404(req.Path)))
+			n.Write([]byte(headerts + std.NotFound404(req.Path)))
 			return
 		}
 	} else {
-		ftype := sstr.GetMimeByExt(filepath.Ext(rootdir + req.Path))
-		header := sstr.NewDefaultRespHeader(200, int(stat.Size()), ftype, "inline", "keep-alive")
+		ftype := std.GetMimeByExt(filepath.Ext(rootdir + req.Path))
+		header := std.NewDefaultRespHeader(200, int(stat.Size()), ftype, "inline", "keep-alive")
 		headerts := header.PrepRespHeader()
 		fmt.Printf("Sent Header:\n\x1b[34m%s\x1b[m", headerts)
 		n.Write([]byte(headerts))
 		err = sendFile(n, rootdir+req.Path)
 		if err != nil {
 			log.Printf("%v\n" + err.Error())
-			header = sstr.NewDefaultRespHeader(500, len(sstr.ServerErr500()), "text/html; charset=utf-8", "inline;", "close")
+			header = std.NewDefaultRespHeader(500, len(std.ServerErr500()), "text/html; charset=utf-8", "inline;", "close")
 			headerts := header.PrepRespHeader()
 			fmt.Printf("Sent Header:\n\n\x1b[34m%s\x1b[m", headerts)
-			n.Write([]byte(headerts + sstr.ServerErr500()))
+			n.Write([]byte(headerts + std.ServerErr500()))
 		}
 		return
 	}
 
 }
-func FormTest(req *sstr.Req, n net.Conn) {
+func FormTest(req *std.Req, n net.Conn) {
 	if req.Method == "POST" {
 		req.ParseFormData()
 		fmt.Printf("\nBody: %s\n", req.Data.FormData["text-input"])
-		header := sstr.NewDefaultRespHeader(200,GetSize(rootdir+"index.html"),"text/html; charset=utf8","inline","keep-alive")
-		n.Write([]byte(header.PrepRespHeader()))
-		sendFile(n,rootdir+"index.html")
 	} else {
-		header := sstr.NewDefaultRespHeader(200, GetSize(rootdir+"index.html"), "text/html; charset=utf-8", "inline;", "keep-alive;")
+		header := std.NewDefaultRespHeader(200, GetSize(rootdir+"index.html"), "text/html; charset=utf-8", "inline;", "keep-alive;")
 		n.Write([]byte(header.PrepRespHeader()))
 		sendFile(n, rootdir+"index.html")
 	}
