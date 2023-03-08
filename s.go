@@ -6,44 +6,41 @@ import (
 	"io"
 	"log"
 	"net"
-	"net/url"
 	"os"
-	"path/filepath"
+	"server/html"
 	"server/server"
 )
 
+// set config path
+var cfg = std.LoadConfig("config")
+
 // Sorry for copy pasting
 const (
-	// Set root directory here
-	rootdir = "./rootdir/"
-	// Allow HTMl directory listing
-	allowdirectoryview = true
-	// Will always serve index.html from rootdir when asking for /
-	indexfirst = false
-	// Set port ofc
-	port = ":443"
-	// Certificate and key path i self signed one and it works okay ig
-	certFile = "./cert.pem"
-	keyFile  = "./key.pem"
-	// test stuff
-	ts = true
+// Set root directory here
+// rootdir = "./rootdir/"
+// Allow HTMl directory listing
+// allowdirectoryview = true
+// Will always serve index.html from rootdir when asking for /
+// indexfirst = false
+// Set port ofc
+// port = ":443"
+// Certificate and key path i self signed one and it works okay ig
+// certFile = "./cert.pem"
+// keyFile  = "./key.pem"
+// test stuff
+// ts = true
 )
 
 // func
-func GetSize(p string) int {
+func GetStat(p string) (os.FileInfo, error) {
 	f, e := os.Stat(p)
 	if e != nil {
 		log.Println(e.Error())
-		return 0
+		return nil, e
 	}
-	return int(f.Size())
+	return f, nil
 }
-func Checkerr(err error) {
-	if err != nil {
-		log.Printf("\n" + err.Error())
-	}
-}
-func sendFile(conn net.Conn,p string) error {
+func sendFile(conn net.Conn, p string) error {
 	file, err := os.Open(p)
 	if err != nil {
 		return err
@@ -59,7 +56,8 @@ func sendFile(conn net.Conn,p string) error {
 	return nil
 }
 func main() {
-	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	fmt.Println(cfg.Port)
+	cert, err := tls.LoadX509KeyPair(cfg.CertPath, cfg.KeyPath)
 	if err != nil {
 		log.Fatalf("\x1b[31mFailed to load TLS certificate: %s\x1b[m\n", err)
 		return
@@ -69,15 +67,15 @@ func main() {
 		Certificates: []tls.Certificate{cert},
 	}
 
-	ln, err := net.Listen("tcp", port)
+	ln, err := net.Listen("tcp", cfg.Port)
 	if err != nil {
-		log.Fatalf("\x1b[31m[-]Failed to listen on port %s: %s\x1b[m\n", port, err)
+		log.Fatalf("\x1b[31m[-]Failed to listen on port %s: %s\x1b[m\n", cfg.Port, err)
 		return
 	}
 
 	tlsListener := tls.NewListener(ln, config)
 	defer tlsListener.Close()
-	fmt.Printf("\x1b[32m[+]Sucessfully started a server on %s\x1b[m\n", port)
+	fmt.Printf("\x1b[32m[+]Sucessfully started a server on %s\x1b[m\n", cfg.Port)
 	for {
 		conn, err := tlsListener.Accept()
 		if err != nil {
@@ -90,104 +88,141 @@ func main() {
 	}
 }
 func DefaultHandler(n net.Conn) {
-	for {
-		req, err := std.ParseReqHeadersbyString(n)
-		// Funni
-		if err != nil {
-			/*log.Printf("\x1b[31m%s\x1b[m", err.Error()) The only place where a red error log appears as of editing rn i will add soon this may be the culprit of the EOF error idk why*/
-			n.Write([]byte("Kill yourself"))
-			return
-		} else if req.Method == "Not Provided" || req.Path == "Not Provided" {
-			n.Write([]byte("Kill yourself"))
-			return
-		}
-		if req.Connection == "close" {
-			n.Close()
-			return
-		}
-		if ts {
-			if req.Method == "POST" {
-				FormTest(req, n)
-				return
-			}
-		}
-		if req.Method == "GET" {
-			GET(req, n)
+	req, err := std.ParseRequest(n)
+	if err != nil {
+		n.Close()
+	}
+	for { // Will this help fix goroutine leak??
+		donewithconn := DefaultGET(n, req)
+		if donewithconn {
+			break
 		}
 	}
 }
-
-// Very ugly code sorry for that
-func GET(req *std.Req, n net.Conn) {
-	localpath, err := url.QueryUnescape(req.Path)
-	Checkerr(err)
-	fmt.Printf("\x1b[32mFrom: \x1b[33m%s\n%s %s %s\x1b[m\n\x1b[32mUser-Agent: \x1b[33m%s\x1b[m\n\x1b[32mAccepted types: \x1b[33m%s\x1b[m\n\n", n.RemoteAddr(), req.Method, req.Path, req.HTTPver, req.UserAgent, req.AcceptType)
-	if indexfirst {
-		header := std.NewDefaultRespHeader(200, GetSize(rootdir+"/"+"index.html"), "text/html; charset=utf-8", "inline;", "close")
-		n.Write([]byte(header.PrepRespHeader()))
-		err := sendFile(n, rootdir+"/"+"index.html")
-		if err != nil {
-			err = sendFile(n, rootdir+"/"+"index.html")
-			if err != nil {
-				log.Println(err.Error())
-			}
+func DefaultGET(n net.Conn, req *std.Req) bool {
+	stat, err := os.Stat(cfg.RootDirectory + req.Path)
+	if err != nil && os.IsNotExist(err) {
+		h := &std.RespHeader{
+			StatusCode:         "404",
+			HTTPver:            "HTTP/1.1",
+			Date:               std.RetDefaultTime(),
+			Server:             "retarded_server/1.1",
+			LastModified:       std.RetDefaultTime(),
+			ContentType:        "text/html; charset=utf-8",
+			ContentLength:      len(bakedhtml.NotFound404(req.Path)),
+			ContentDisposition: "inline",
+			ConnectionType:     "close",
 		}
-		return
+		n.Write([]byte(h.PrepRespHeader() + bakedhtml.NotFound404(req.Path)))
+		return false
 	}
-	if req.Path == "Not Provided" {
-		header := std.NewDefaultRespHeader(400, len(std.BadRequest400()), "text/html", "inline;", "close")
-		headerts := header.PrepRespHeader()
-		fmt.Printf("Sent Header:\n\x1b[34m%s\x1b[m", headerts)
-		n.Write([]byte(headerts + std.BadRequest400()))
-		return
-	}
-	stat, err := os.Stat(rootdir + localpath)
 	if err != nil {
-		header := std.NewDefaultRespHeader(404, len(std.NotFound404(localpath)), "text/html; charset=utf-8", "inline;", "close")
-		headerts := header.PrepRespHeader()
-		fmt.Printf("Sent Header:\n\x1b[34m%s\x1b[m", headerts)
-		n.Write([]byte(headerts + std.NotFound404(localpath)))
-		return
+		h := &std.RespHeader{
+			StatusCode:         "500",
+			HTTPver:            "HTTP/1.1",
+			Date:               std.RetDefaultTime(),
+			Server:             "retarded_server/1.1",
+			LastModified:       std.RetDefaultTime(),
+			ContentType:        "text/html; charset=utf-8",
+			ContentLength:      len(bakedhtml.ServerErr500()),
+			ContentDisposition: "inline",
+			ConnectionType:     "close",
+		}
+		n.Write([]byte(h.PrepRespHeader() + bakedhtml.ServerErr500()))
+		return true
+	}
+	if cfg.IndexFirst {
+		s, e := GetStat(cfg.RootDirectory +"/" +"index.html")
+		if err != nil && os.IsNotExist(err) {
+			log.Printf("\x1b[31mDude index.html doesnt exist\n\x1b[m")
+			h := &std.RespHeader{
+				StatusCode:         "200",
+				HTTPver:            "HTTP/1.1",
+				Date:               std.RetDefaultTime(),
+				Server:             "retarded_server/1.1",
+				LastModified:       std.RetDefaultTime(),
+				ContentType:        "text/html; charset=utf-8",
+				ContentLength:      len(bakedhtml.HTMLDirList(cfg.RootDirectory, "/")),
+				ContentDisposition: "inline",
+				ConnectionType:     "keep-alive",
+			}
+			n.Write([]byte(h.PrepRespHeader() + bakedhtml.HTMLDirList(cfg.RootDirectory, req.Path)))
+			return false
+		} else if err != nil {
+			log.Printf("\x1b[Cannot open index.html: %s\n\x1b[m", e.Error())
+			h := &std.RespHeader{
+			StatusCode:         "500",
+			HTTPver:            "HTTP/1.1",
+			Date:               std.RetDefaultTime(),
+			Server:             "retarded_server/1.1",
+			LastModified:       std.RetDefaultTime(),
+			ContentType:        "text/html; charset=utf-8",
+			ContentLength:      len(bakedhtml.ServerErr500()),
+			ContentDisposition: "inline",
+			ConnectionType:     "close",
+		}
+		n.Write([]byte(h.PrepRespHeader() + bakedhtml.ServerErr500()))
+		return true
+		}
+		h := &std.RespHeader{
+			StatusCode:         "200",
+			HTTPver:            "HTTP/1.1",
+			Date:               std.RetDefaultTime(),
+			Server:             "retarded_server/1.1",
+			LastModified:       stat.ModTime().Format("Mon, 02 Jan 2006 15:04:05 GMT"),
+			ContentType:        "text/html; charset=utf-8",
+			ContentLength:      int(s.Size()),
+			ContentDisposition: "inline",
+			ConnectionType:     "keep-alive",
+		}
+		n.Write([]byte(h.PrepRespHeader()))
+		sendFile(n, cfg.RootDirectory+"index.html")
+		return false
 	}
 	if stat.IsDir() {
-		if allowdirectoryview {
-			header := std.NewDefaultRespHeader(200, len(std.HTMLDirList(rootdir, req.Path)), "text/html; charset=utf-8", "inline;", "close")
-			headerts := header.PrepRespHeader()
-			fmt.Printf("Sent Header:\x1b[34m\n%s\x1b[m", headerts)
-			n.Write([]byte(headerts + std.HTMLDirList(rootdir, localpath)))
-			return
-		} else {
-			header := std.NewDefaultRespHeader(404, len(std.NotFound404(req.Path)), "text/html", "inline;", "close")
-			headerts := header.PrepRespHeader()
-			fmt.Printf("Sent Header:\n\x1b[34m%s\x1b[m", headerts)
-			n.Write([]byte(headerts + std.NotFound404(req.Path)))
-			return
+		if cfg.AllowDirView {
+			h := &std.RespHeader{
+				StatusCode:         "200",
+				HTTPver:            "HTTP/1.1",
+				Date:               std.RetDefaultTime(),
+				Server:             "retarded_server/1.1",
+				LastModified:       std.RetDefaultTime(),
+				ContentType:        "text/html; charset=utf-8",
+				ContentLength:      len(bakedhtml.HTMLDirList(cfg.RootDirectory, req.Path)),
+				ContentDisposition: "inline",
+				ConnectionType:     "keep-alive",
+			}
+			n.Write([]byte(h.PrepRespHeader() + bakedhtml.HTMLDirList(cfg.RootDirectory, req.Path)))
+			return false
 		}
 	} else {
-		ftype := std.GetMimeByExt(filepath.Ext(rootdir + req.Path))
-		header := std.NewDefaultRespHeader(200, int(stat.Size()), ftype, "inline", "keep-alive")
-		headerts := header.PrepRespHeader()
-		fmt.Printf("Sent Header:\n\x1b[34m%s\x1b[m", headerts)
-		n.Write([]byte(headerts))
-		err = sendFile(n, rootdir+req.Path)
-		if err != nil {
-			log.Printf("%v\n" + err.Error())
-			header = std.NewDefaultRespHeader(500, len(std.ServerErr500()), "text/html; charset=utf-8", "inline;", "close")
-			headerts := header.PrepRespHeader()
-			fmt.Printf("Sent Header:\n\n\x1b[34m%s\x1b[m", headerts)
-			n.Write([]byte(headerts + std.ServerErr500()))
+		h := &std.RespHeader{
+			StatusCode:         "200",
+			HTTPver:            "HTTP/1.1",
+			Date:               std.RetDefaultTime(),
+			Server:             "retarded_server/1.1",
+			LastModified:       stat.ModTime().Format("Mon, 02 Jan 2006 15:04:05 GMT"),
+			ContentType:        "text/html; charset=utf-8",
+			ContentLength:      int(stat.Size()),
+			ContentDisposition: "inline",
+			ConnectionType:     "keep-alive",
 		}
-		return
+		n.Write([]byte(h.PrepRespHeader()))
+		sendFile(n, cfg.RootDirectory+"/"+req.Path)
+		return false
 	}
+	h := &std.RespHeader{
+		StatusCode:         "404",
+		HTTPver:            "HTTP/1.1",
+		Date:               std.RetDefaultTime(),
+		Server:             "retarded_server/1.1",
+		LastModified:       std.RetDefaultTime(),
+		ContentType:        "text/html; charset=utf-8",
+		ContentLength:      len(bakedhtml.NotFound404(req.Path)),
+		ContentDisposition: "inline",
+		ConnectionType:     "close",
+	}
+	n.Write([]byte(h.PrepRespHeader() + bakedhtml.NotFound404(req.Path)))
+	return false
 
-}
-func FormTest(req *std.Req, n net.Conn) {
-	if req.Method == "POST" {
-		req.ParseFormData()
-		fmt.Printf("\nBody: %s\n", req.Data.FormData["text-input"])
-	} else {
-		header := std.NewDefaultRespHeader(200, GetSize(rootdir+"index.html"), "text/html; charset=utf-8", "inline;", "keep-alive;")
-		n.Write([]byte(header.PrepRespHeader()))
-		sendFile(n, rootdir+"index.html")
-	}
 }

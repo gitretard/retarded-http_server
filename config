@@ -1,0 +1,8 @@
+port: 443
+allow_directory_view: true
+teststuff: true
+cert_path: ./cert.pem
+key_path: ./key.pem
+root_directory: rootdir
+index_first: fals
+replace the certificate paths with your own!

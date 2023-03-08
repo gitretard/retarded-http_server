@@ -1,4 +1,4 @@
-package std
+package bakedhtml
 import(
 	"io/ioutil"
 	"strings"
@@ -8,13 +8,16 @@ import(
 	"io/fs"
 	"path"
 )
-func HTMLDirList(pathto string, a string) string {
-	filesListRaw, err := ioutil.ReadDir("./" + pathto + a)
+var Mediasoundext = []string{".m4a", ".opus", ".flac", ".wav", ".mp3", ".m4b"}
+var Vidext = []string{".mp4", ".mkv", ".ogg", ".avi", ".mpeg", ".svi", ".mov", ".flv", ".f4v", ".webm"}
+var Imgex = []string{".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico", ".bmp"}
+func HTMLDirList(rd string, a string) string {
+	filesListRaw, err := ioutil.ReadDir("./" + rd + a)
 	if err != nil {
 		log.Printf("%v %v\n" + err.Error())
 	}
 	if len(filesListRaw) == 0 {
-		return "<!DOCTYPE html><body style=\"background-color:black\"><p style=\"color: white;font-size:1cm;\"><b>No files are found in " + pathto + " </b></p></body>"
+		return "<!DOCTYPE html><body style=\"background-color:black\"><p style=\"color: white;font-size:1cm;\"><b>No files are found in " + a + " </b></p></body>"
 	}
 	filesList := "<!DOCTYPE html><body style=\"background-color:black\"><p style=\"color: white;font-size:1cm;\"><b>Index of " + a + "</b></p>"
 	for index, file := range filesListRaw {

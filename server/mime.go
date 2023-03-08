@@ -1,7 +1,6 @@
 package std
-var Mediasoundext = []string{".m4a", ".opus", ".flac", ".wav", ".mp3", ".m4b"}
-var Vidext = []string{".mp4", ".mkv", ".ogg", ".avi", ".mpeg", ".svi", ".mov", ".flv", ".f4v", ".webm"}
-var Imgex = []string{".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico", ".bmp"}
+
+import "path/filepath"
 
 var mimeTypes = map[string]string{
 	".aac":   "audio/aac",
@@ -55,8 +54,9 @@ var mimeTypes = map[string]string{
 	".zip":   "application/zip",
 	".7z":    "application/x-7z-compressed",
 }
-func GetMimeByExt(ext string) string {
-	if mime, ok := mimeTypes[ext]; ok {
+
+func GetMimeByExt(p string) string {
+	if mime, ok := mimeTypes[filepath.Ext(p)]; ok {
 		return mime
 	} else {
 		return "application/octet-stream"

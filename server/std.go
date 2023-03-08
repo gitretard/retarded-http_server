@@ -1,13 +1,16 @@
 package std
 
 import (
+	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
+	"log"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"time"
-	"bytes"
 )
 
 // structs for yknow
@@ -19,7 +22,6 @@ type Req struct { // string strings  strings.... Also more header fields with be
 	AcceptEncoding string
 	AcceptLanguage string
 	Connection     string
-	ContentLength  int
 	From           string
 	Host           string
 	Method         string
@@ -27,17 +29,15 @@ type Req struct { // string strings  strings.... Also more header fields with be
 	UserAgent      string
 	CurrentConnection  net.Conn // haha very secure
 	Data struct{
+		ContentLength  int
 		FormData map[string]string
-		Body string
-		
+		Body string	
 	}
 	ContentType string
-
 }
 type RespHeader struct {
 	HTTPver            string
 	StatusCode         string
-	StatusAsint        int
 	Date               string
 	Server             string
 	LastModified       string
@@ -60,36 +60,8 @@ func (h *RespHeader) PrepRespHeader() string {
 	return compiled
 }
 
-// New response
-func NewDefaultRespHeader(status int, size int, mimetype string, dispositiontype, conntype string) *RespHeader {
-	h := &RespHeader{}
-	h.HTTPver = "HTTP/1.1"
-	h.StatusAsint = status
-	switch status {
-	case 200:
-		h.StatusCode = "200 OK"
-	// Wont handle other codes yet
-	case 400:
-		h.StatusCode = "400 Bad Request"
-	case 404:
-		h.StatusCode = "404 Not Found"
-	case 500:
-		h.StatusCode = "500 Internal Server Error"
-	default:
-		h.StatusCode = "501 Not implemented"
-	}
-	h.Date = RetDefaultTime()
-	h.Server = "shitserver/0.0"
-	h.LastModified = h.Date
-	h.ContentLength = size
-	h.ContentType = mimetype
-	h.ContentDisposition = dispositiontype
-	h.ConnectionType = conntype
-	return h
-}
-
 // Parse request headers
-func ParseReqHeadersbyString(n net.Conn) (*Req, error) {
+func ParseRequest(n net.Conn) (*Req, error) {
 	headerbuf := make([]byte, 8190)
 	length, err := n.Read(headerbuf)
 	if err != nil {
@@ -143,6 +115,11 @@ func ParseReqHeadersbyString(n net.Conn) (*Req, error) {
 				h.AcceptLanguage = fields[1]
 			case "accept-datetime:":
 				h.AcceptDatetime = strings.Join(fields[1:], " ")
+			case "content-length":
+				h.Data.ContentLength,err = strconv.Atoi(fields[1])
+				if err!=nil{
+					return nil,err
+				}
 			}
 
 		}
@@ -155,7 +132,6 @@ func ParseReqHeadersbyString(n net.Conn) (*Req, error) {
 func AckHeader(lent int) *RespHeader{
 	h := &RespHeader{}
 	h.HTTPver = "HTTP/1.1"
-	h.StatusAsint = 200
 	h.StatusCode = "200 OK"
 	h.ContentDisposition = "inline;"
 	h.Server = "shitserver/0.0"
@@ -188,4 +164,55 @@ func URLunescape(s string) (string, error) {
         }
     }
     return buf.String(), nil
+}
+type Config struct{
+	Port string
+	CertPath string
+	KeyPath string
+	TestStuff bool
+	AllowDirView bool
+	RootDirectory string
+	IndexFirst bool
+}
+func LoadConfig(p string) (*Config){
+	cnfgf,err := os.Open(p)
+	if err != nil {
+		log.Fatalf("\x1b[31mUnable to open config file: %s",err.Error())
+	}
+	sc := bufio.NewScanner(cnfgf)
+	cn := &Config{}
+	for sc.Scan(){
+		c := strings.Split(strings.ReplaceAll(sc.Text()," ",""),":")
+		switch strings.ToLower(c[0]){
+			// use default :port strat
+		case "port":
+			cn.Port = ":"+c[1]
+		case "cert_path":
+			cn.CertPath = c[1]
+		case "key_path":
+			cn.KeyPath = c[1]
+		case "allow_directory_view":
+			if c[1] == "true"{
+				cn.AllowDirView = true
+			} else {
+				cn.AllowDirView = false
+			}
+		case "teststuff":
+			if c[1] == "true"{
+				cn.TestStuff= true
+			} else {
+				cn.TestStuff = false
+			}
+		case "root_directory":
+			cn.RootDirectory = c[1]
+		case "index_first":
+			if c[1] == "true"{
+				cn.IndexFirst = true
+			} else {
+				cn.IndexFirst = false
+			}
+		}
+
+	}
+	return cn
 }
