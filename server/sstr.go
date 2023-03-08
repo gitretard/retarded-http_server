@@ -1,4 +1,4 @@
-package sstr
+package std
 
 import (
 	"errors"
@@ -29,7 +29,10 @@ type Req struct { // string strings  strings.... Also more header fields with be
 	Data struct{
 		FormData map[string]string
 		Body string
+		
 	}
+	ContentType string
+
 }
 type RespHeader struct {
 	HTTPver            string

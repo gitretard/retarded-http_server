@@ -1,4 +1,4 @@
-package sstr
+package std
 import(
 	"io/ioutil"
 	"strings"
