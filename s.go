@@ -56,7 +56,6 @@ func sendFile(conn net.Conn, p string) error {
 	return nil
 }
 func main() {
-	fmt.Println(cfg.Port)
 	cert, err := tls.LoadX509KeyPair(cfg.CertPath, cfg.KeyPath)
 	if err != nil {
 		log.Fatalf("\x1b[31mFailed to load TLS certificate: %s\x1b[m\n", err)
@@ -72,7 +71,7 @@ func main() {
 		log.Fatalf("\x1b[31m[-]Failed to listen on port %s: %s\x1b[m\n", cfg.Port, err)
 		return
 	}
-
+	defer ln.Close()
 	tlsListener := tls.NewListener(ln, config)
 	defer tlsListener.Close()
 	fmt.Printf("\x1b[32m[+]Sucessfully started a server on %s\x1b[m\n", cfg.Port)
@@ -80,6 +79,7 @@ func main() {
 		conn, err := tlsListener.Accept()
 		if err != nil {
 			log.Printf("\x1b[31mFailed to accept connection: %s\x1b[31m\n", err)
+			conn.Close()
 			continue
 		}
 		defer conn.Close()
@@ -91,19 +91,42 @@ func DefaultHandler(n net.Conn) {
 	req, err := std.ParseRequest(n)
 	if err != nil {
 		n.Close()
+		fmt.Println(err.Error())
+		return
 	}
-	for { // Will this help fix goroutine leak??
-		donewithconn := DefaultGET(n, req)
-		if donewithconn {
-			break
+	fmt.Printf("\x1b[32mFrom: %s\n\x1b[33m%s %s %s\n\x1b[32mUser-Agent: \x1b[33m%s\n\n\x1b[m", n.RemoteAddr(), req.Method, req.Path, req.HTTPver, req.UserAgent)
+	if req.Method == "POST" {
+		if cfg.TestStuff {
+			for {
+				//TODO find a way to make POST work properly
+				donewithconn := TestPOST(n, req)
+				if donewithconn {
+					return
+				}
+			}
 		}
 	}
+	for {
+		donewithconn := DefaultGET(n, req)
+		if donewithconn {
+			return
+		}
+	}
+}
+
+// RespHeader struct for normal responses
+func TestPOST(n net.Conn, req *std.Req) bool {
+	// I don't know how the browser expects the connection to be . Also ill leave the fucntion here
+	req.ParseFormData()
+	n.Write([]byte("HTTP/1.1 200 OK \r\n\r\n"))
+	fmt.Println(req.Data.FormData["text-input"])
+	return true
 }
 func DefaultGET(n net.Conn, req *std.Req) bool {
 	stat, err := os.Stat(cfg.RootDirectory + req.Path)
 	if err != nil && os.IsNotExist(err) {
 		h := &std.RespHeader{
-			StatusCode:         "404",
+			StatusCode:         "404 Not found",
 			HTTPver:            "HTTP/1.1",
 			Date:               std.RetDefaultTime(),
 			Server:             "retarded_server/1.1",
@@ -118,7 +141,7 @@ func DefaultGET(n net.Conn, req *std.Req) bool {
 	}
 	if err != nil {
 		h := &std.RespHeader{
-			StatusCode:         "500",
+			StatusCode:         "500 Server error. Closing connection",
 			HTTPver:            "HTTP/1.1",
 			Date:               std.RetDefaultTime(),
 			Server:             "retarded_server/1.1",
@@ -132,9 +155,9 @@ func DefaultGET(n net.Conn, req *std.Req) bool {
 		return true
 	}
 	if cfg.IndexFirst {
-		s, e := GetStat(cfg.RootDirectory +"/" +"index.html")
+		s, e := GetStat(cfg.RootDirectory + "/" + "index.html")
 		if err != nil && os.IsNotExist(err) {
-			log.Printf("\x1b[31mDude index.html doesnt exist\n\x1b[m")
+			log.Printf("\x1b[31m\nDude index.html doesnt exist\n\x1b[m")
 			h := &std.RespHeader{
 				StatusCode:         "200",
 				HTTPver:            "HTTP/1.1",
@@ -151,21 +174,21 @@ func DefaultGET(n net.Conn, req *std.Req) bool {
 		} else if err != nil {
 			log.Printf("\x1b[Cannot open index.html: %s\n\x1b[m", e.Error())
 			h := &std.RespHeader{
-			StatusCode:         "500",
-			HTTPver:            "HTTP/1.1",
-			Date:               std.RetDefaultTime(),
-			Server:             "retarded_server/1.1",
-			LastModified:       std.RetDefaultTime(),
-			ContentType:        "text/html; charset=utf-8",
-			ContentLength:      len(bakedhtml.ServerErr500()),
-			ContentDisposition: "inline",
-			ConnectionType:     "close",
-		}
-		n.Write([]byte(h.PrepRespHeader() + bakedhtml.ServerErr500()))
-		return true
+				StatusCode:         "500 Server error. Closing connection",
+				HTTPver:            "HTTP/1.1",
+				Date:               std.RetDefaultTime(),
+				Server:             "retarded_server/1.1",
+				LastModified:       std.RetDefaultTime(),
+				ContentType:        "text/html; charset=utf-8",
+				ContentLength:      len(bakedhtml.ServerErr500()),
+				ContentDisposition: "inline",
+				ConnectionType:     "close",
+			}
+			n.Write([]byte(h.PrepRespHeader() + bakedhtml.ServerErr500()))
+			return true
 		}
 		h := &std.RespHeader{
-			StatusCode:         "200",
+			StatusCode:         "200 OK",
 			HTTPver:            "HTTP/1.1",
 			Date:               std.RetDefaultTime(),
 			Server:             "retarded_server/1.1",
@@ -176,13 +199,13 @@ func DefaultGET(n net.Conn, req *std.Req) bool {
 			ConnectionType:     "keep-alive",
 		}
 		n.Write([]byte(h.PrepRespHeader()))
-		sendFile(n, cfg.RootDirectory+"index.html")
+		sendFile(n, cfg.RootDirectory+"/index.html")
 		return false
 	}
 	if stat.IsDir() {
 		if cfg.AllowDirView {
 			h := &std.RespHeader{
-				StatusCode:         "200",
+				StatusCode:         "200 Ok",
 				HTTPver:            "HTTP/1.1",
 				Date:               std.RetDefaultTime(),
 				Server:             "retarded_server/1.1",
@@ -197,7 +220,7 @@ func DefaultGET(n net.Conn, req *std.Req) bool {
 		}
 	} else {
 		h := &std.RespHeader{
-			StatusCode:         "200",
+			StatusCode:         "200 OK",
 			HTTPver:            "HTTP/1.1",
 			Date:               std.RetDefaultTime(),
 			Server:             "retarded_server/1.1",
@@ -212,7 +235,7 @@ func DefaultGET(n net.Conn, req *std.Req) bool {
 		return false
 	}
 	h := &std.RespHeader{
-		StatusCode:         "404",
+		StatusCode:         "404 Not found",
 		HTTPver:            "HTTP/1.1",
 		Date:               std.RetDefaultTime(),
 		Server:             "retarded_server/1.1",
