@@ -1,7 +1,6 @@
 package bakedhtml
 import(
 	"io/ioutil"
-	"strings"
 	"log"
 	"path/filepath"
 	"strconv"
@@ -22,9 +21,7 @@ func HTMLDirList(rd string, a string) string {
 	filesList := "<!DOCTYPE html><body style=\"background-color:black\"><p style=\"color: white;font-size:1cm;\"><b>Index of " + a + "</b></p>"
 	for index, file := range filesListRaw {
 		link := a
-		if !strings.HasSuffix(link, "/") {
-			link += "/"
-		}
+		if string(link[len(link)-1]) != "/"{link+="/"}
 		link += file.Name()
 
 		filesList += "<a href=\"" + link + "\"><u style=\"text-decoration-color: black;line-height: 0.01;\"><p style=\"font-size: 0.7cm;color:white;line-height: 0.01;\">" + strconv.Itoa(index+1) + ". " + func(currfile fs.FileInfo) string {

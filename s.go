@@ -74,6 +74,10 @@ func main() {
 	defer ln.Close()
 	tlsListener := tls.NewListener(ln, config)
 	defer tlsListener.Close()
+	if string(cfg.RootDirectory[len(cfg.RootDirectory)-1]) != "/" {
+		cfg.RootDirectory += "/"
+	}
+	fmt.Println(cfg.RootDirectory)
 	fmt.Printf("\x1b[32m[+]Sucessfully started a server on %s\x1b[m\n", cfg.Port)
 	for {
 		conn, err := tlsListener.Accept()
@@ -155,7 +159,7 @@ func DefaultGET(n net.Conn, req *std.Req) bool {
 		return true
 	}
 	if cfg.IndexFirst {
-		s, e := GetStat(cfg.RootDirectory + "/" + "index.html")
+		s, e := GetStat(cfg.RootDirectory + "index.html")
 		if err != nil && os.IsNotExist(err) {
 			log.Printf("\x1b[31m\nDude index.html doesnt exist\n\x1b[m")
 			h := &std.RespHeader{
@@ -205,7 +209,7 @@ func DefaultGET(n net.Conn, req *std.Req) bool {
 	if stat.IsDir() {
 		if cfg.AllowDirView {
 			h := &std.RespHeader{
-				StatusCode:         "200 Ok",
+				StatusCode:         "200 OK",
 				HTTPver:            "HTTP/1.1",
 				Date:               std.RetDefaultTime(),
 				Server:             "retarded_server/1.1",
