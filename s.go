@@ -10,28 +10,7 @@ import (
 	"server/html"
 	"server/server"
 )
-
-// set config path
 var cfg = std.LoadConfig("config")
-
-// Sorry for copy pasting
-const (
-// Set root directory here
-// rootdir = "./rootdir/"
-// Allow HTMl directory listing
-// allowdirectoryview = true
-// Will always serve index.html from rootdir when asking for /
-// indexfirst = false
-// Set port ofc
-// port = ":443"
-// Certificate and key path i self signed one and it works okay ig
-// certFile = "./cert.pem"
-// keyFile  = "./key.pem"
-// test stuff
-// ts = true
-)
-
-// func
 func GetStat(p string) (os.FileInfo, error) {
 	f, e := os.Stat(p)
 	if e != nil {
@@ -92,6 +71,7 @@ func main() {
 	}
 }
 func DefaultHandler(n net.Conn) {
+	// I am still wondering how it works like you are in a for loop and how does it return to this function every time? damnit i need my brain checked // Wait is the goroutine still stuck?
 	req, err := std.ParseRequest(n)
 	if err != nil {
 		n.Close()

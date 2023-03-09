@@ -184,21 +184,21 @@ func LoadConfig(p string) (*Config){
 	for sc.Scan(){
 		c := strings.Split(strings.ReplaceAll(sc.Text()," ",""),":")
 		switch strings.ToLower(c[0]){
-			// use default :port strat
+			// use default :port 
 		case "port":
-			cn.Port = ":"+c[1]
+			cn.Port = ":"+ c[1]
 		case "cert_path":
 			cn.CertPath = c[1]
 		case "key_path":
 			cn.KeyPath = c[1]
 		case "allow_directory_view":
-			if c[1] == "true"{
+			if c[1] == "true" || c[1] == "yes"{
 				cn.AllowDirView = true
 			} else {
 				cn.AllowDirView = false
 			}
 		case "teststuff":
-			if c[1] == "true"{
+			if c[1] == "true" || c[1] == "yes"{
 				cn.TestStuff= true
 			} else {
 				cn.TestStuff = false
@@ -206,7 +206,7 @@ func LoadConfig(p string) (*Config){
 		case "root_directory":
 			cn.RootDirectory = c[1]
 		case "index_first":
-			if c[1] == "true"{
+			if c[1] == "true"|| c[1] == "yes"{
 				cn.IndexFirst = true
 			} else {
 				cn.IndexFirst = false
