@@ -1,8 +1,9 @@
 port: 443
 allow_directory_view: true
 teststuff: set to true if u want
-cert_path: ./cert.pem
-key_path: ./key.pem
+cert_path: certificate.crt
+key_path: private.key
 root_directory: rootdir
 index_first: nah
+server_name: retardedhttpserver/0.1
 replace the certificate paths with your own!

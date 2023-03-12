@@ -10,7 +10,17 @@ import (
 	"server/html"
 	"server/server"
 )
+
+const (
+	StdGETfmt = "HTTP/1.1 %s\r\nDate: %s\r\nServer: %s\r\nLast-Modified: %s\r\nContent-Length: %d\r\nContent-Type: %s\r\nContent-Disposition: %s\r\nConnection: %s\r\n\r\n"
+	/*func (h *RespHeader) PrepRespHeader() string {
+		compiled := fmt.Sprintf("%s %s\r\nDate: %s\r\nServer: %s\r\nLast-Modified: %s\r\nContent-Length: %d\r\nContent-Type: %s\r\nContent-Disposition: %s\r\nConnection: %s\r\n\r\n", h.HTTPver, h.StatusCode, h.Date, h.Server, h.LastModified, h.ContentLength, h.ContentType, h.ContentDisposition, h.ConnectionType)
+		return compiled
+	}*/
+)
+
 var cfg = std.LoadConfig("config")
+
 func GetStat(p string) (os.FileInfo, error) {
 	f, e := os.Stat(p)
 	if e != nil {
@@ -106,130 +116,51 @@ func TestPOST(n net.Conn, req *std.Req) bool {
 	fmt.Println(req.Data.FormData["text-input"])
 	return true
 }
+
+// Will change from struct to fmt string but it ended up worse than i thought so later on
 func DefaultGET(n net.Conn, req *std.Req) bool {
 	stat, err := os.Stat(cfg.RootDirectory + req.Path)
 	if err != nil && os.IsNotExist(err) {
-		h := &std.RespHeader{
-			StatusCode:         "404 Not found",
-			HTTPver:            "HTTP/1.1",
-			Date:               std.RetDefaultTime(),
-			Server:             "retarded_server/1.1",
-			LastModified:       std.RetDefaultTime(),
-			ContentType:        "text/html; charset=utf-8",
-			ContentLength:      len(bakedhtml.NotFound404(req.Path)),
-			ContentDisposition: "inline",
-			ConnectionType:     "close",
-		}
-		n.Write([]byte(h.PrepRespHeader() + bakedhtml.NotFound404(req.Path)))
+		h := fmt.Sprintf(StdGETfmt, "404 Not found", std.RetDefaultTime(), cfg.ServerName, std.RetDefaultTime(), len(bakedhtml.NotFound404(req.Path)), "text/html", "inline;", "close")
+		n.Write([]byte(h + bakedhtml.NotFound404(req.Path)))
 		return false
 	}
 	if err != nil {
-		h := &std.RespHeader{
-			StatusCode:         "500 Server error. Closing connection",
-			HTTPver:            "HTTP/1.1",
-			Date:               std.RetDefaultTime(),
-			Server:             "retarded_server/1.1",
-			LastModified:       std.RetDefaultTime(),
-			ContentType:        "text/html; charset=utf-8",
-			ContentLength:      len(bakedhtml.ServerErr500()),
-			ContentDisposition: "inline",
-			ConnectionType:     "close",
-		}
-		n.Write([]byte(h.PrepRespHeader() + bakedhtml.ServerErr500()))
+		h := fmt.Sprintf(StdGETfmt, "500 Internal server error", std.RetDefaultTime(), cfg.ServerName, std.RetDefaultTime(), len(bakedhtml.ServerErr500()), "text/html", "inline;", "close")
+		n.Write([]byte(h + bakedhtml.ServerErr500()))
 		return true
 	}
 	if cfg.IndexFirst {
 		s, e := GetStat(cfg.RootDirectory + "index.html")
 		if err != nil && os.IsNotExist(err) {
 			log.Printf("\x1b[31m\nDude index.html doesnt exist\n\x1b[m")
-			h := &std.RespHeader{
-				StatusCode:         "200",
-				HTTPver:            "HTTP/1.1",
-				Date:               std.RetDefaultTime(),
-				Server:             "retarded_server/1.1",
-				LastModified:       std.RetDefaultTime(),
-				ContentType:        "text/html; charset=utf-8",
-				ContentLength:      len(bakedhtml.HTMLDirList(cfg.RootDirectory, "/")),
-				ContentDisposition: "inline",
-				ConnectionType:     "keep-alive",
-			}
-			n.Write([]byte(h.PrepRespHeader() + bakedhtml.HTMLDirList(cfg.RootDirectory, req.Path)))
+			h := fmt.Sprintf(StdGETfmt, "200 OK", std.RetDefaultTime(), cfg.ServerName, std.RetDefaultTime(), len(bakedhtml.HTMLDirList(cfg.RootDirectory, "/")), "text/html;charset=utf-8", "inline", "close")
+			n.Write([]byte(h + bakedhtml.HTMLDirList(cfg.RootDirectory, req.Path)))
 			return false
 		} else if err != nil {
 			log.Printf("\x1b[Cannot open index.html: %s\n\x1b[m", e.Error())
-			h := &std.RespHeader{
-				StatusCode:         "500 Server error. Closing connection",
-				HTTPver:            "HTTP/1.1",
-				Date:               std.RetDefaultTime(),
-				Server:             "retarded_server/1.1",
-				LastModified:       std.RetDefaultTime(),
-				ContentType:        "text/html; charset=utf-8",
-				ContentLength:      len(bakedhtml.ServerErr500()),
-				ContentDisposition: "inline",
-				ConnectionType:     "close",
-			}
-			n.Write([]byte(h.PrepRespHeader() + bakedhtml.ServerErr500()))
+			h := fmt.Sprintf(StdGETfmt, "500 Internal server error", std.RetDefaultTime(), cfg.ServerName, std.RetDefaultTime(), len(bakedhtml.ServerErr500()), "text/html", "inline;", "close")
+			n.Write([]byte(h + bakedhtml.ServerErr500()))
 			return true
 		}
-		h := &std.RespHeader{
-			StatusCode:         "200 OK",
-			HTTPver:            "HTTP/1.1",
-			Date:               std.RetDefaultTime(),
-			Server:             "retarded_server/1.1",
-			LastModified:       stat.ModTime().Format("Mon, 02 Jan 2006 15:04:05 GMT"),
-			ContentType:        "text/html; charset=utf-8",
-			ContentLength:      int(s.Size()),
-			ContentDisposition: "inline",
-			ConnectionType:     "keep-alive",
-		}
-		n.Write([]byte(h.PrepRespHeader()))
-		sendFile(n, cfg.RootDirectory+"/index.html")
+		h := fmt.Sprintf(StdGETfmt, "200 OK", std.RetDefaultTime(), cfg.ServerName, s.ModTime().Format("Mon, 02 Jan 2006 15:04:05 GMT"), s.Size(), std.GetMimeByExt(s.Name()), "inline", "close")
+		n.Write([]byte(h))
+		sendFile(n, cfg.RootDirectory+"index.html")
 		return false
 	}
 	if stat.IsDir() {
 		if cfg.AllowDirView {
-			h := &std.RespHeader{
-				StatusCode:         "200 OK",
-				HTTPver:            "HTTP/1.1",
-				Date:               std.RetDefaultTime(),
-				Server:             "retarded_server/1.1",
-				LastModified:       std.RetDefaultTime(),
-				ContentType:        "text/html; charset=utf-8",
-				ContentLength:      len(bakedhtml.HTMLDirList(cfg.RootDirectory, req.Path)),
-				ContentDisposition: "inline",
-				ConnectionType:     "keep-alive",
-			}
-			n.Write([]byte(h.PrepRespHeader() + bakedhtml.HTMLDirList(cfg.RootDirectory, req.Path)))
+			h := fmt.Sprintf(StdGETfmt, "200 OK", std.RetDefaultTime(), cfg.ServerName, std.RetDefaultTime(), len(bakedhtml.HTMLDirList(cfg.RootDirectory, req.Path)), "text/html;charset=utf-8", "inline", "close")
+			n.Write([]byte(h + bakedhtml.HTMLDirList(cfg.RootDirectory, req.Path)))
 			return false
 		}
 	} else {
-		h := &std.RespHeader{
-			StatusCode:         "200 OK",
-			HTTPver:            "HTTP/1.1",
-			Date:               std.RetDefaultTime(),
-			Server:             "retarded_server/1.1",
-			LastModified:       stat.ModTime().Format("Mon, 02 Jan 2006 15:04:05 GMT"),
-			ContentType:        "text/html; charset=utf-8",
-			ContentLength:      int(stat.Size()),
-			ContentDisposition: "inline",
-			ConnectionType:     "keep-alive",
-		}
-		n.Write([]byte(h.PrepRespHeader()))
-		sendFile(n, cfg.RootDirectory+"/"+req.Path)
+		h := fmt.Sprintf(StdGETfmt, "200 OK", std.RetDefaultTime(), cfg.ServerName, stat.ModTime().Format("Mon, 02 Jan 2006 15:04:05 GMT"), stat.Size(), std.GetMimeByExt(cfg.RootDirectory+req.Path), "inline", "close")
+		n.Write([]byte(h))
+		sendFile(n, cfg.RootDirectory+req.Path)
 		return false
 	}
-	h := &std.RespHeader{
-		StatusCode:         "404 Not found",
-		HTTPver:            "HTTP/1.1",
-		Date:               std.RetDefaultTime(),
-		Server:             "retarded_server/1.1",
-		LastModified:       std.RetDefaultTime(),
-		ContentType:        "text/html; charset=utf-8",
-		ContentLength:      len(bakedhtml.NotFound404(req.Path)),
-		ContentDisposition: "inline",
-		ConnectionType:     "close",
-	}
-	n.Write([]byte(h.PrepRespHeader() + bakedhtml.NotFound404(req.Path)))
+	h := fmt.Sprintf(StdGETfmt, "404 Not found", std.RetDefaultTime(), cfg.ServerName, std.RetDefaultTime(), len(bakedhtml.NotFound404(req.Path)), "text/html", "inline;", "close")
+	n.Write([]byte(h + bakedhtml.NotFound404(req.Path)))
 	return false
-
 }

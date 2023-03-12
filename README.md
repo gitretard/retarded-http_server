@@ -16,10 +16,10 @@ Issues;
 
 5. Awful code
 
-6. Naming issues (cannot open files with special characters like ^%#*^@*$^#@*) also idk why
-
-7. IndexFirst now works (Plaster fix by adding "/" after cfg.RootDirectory)
+6. IndexFirst now works (Plaster fix by adding "/" after cfg.RootDirectory)
 
 I just tested the server with Apache Jmeter (100000 Max users in thread control,hold for 1000 secs,https,GET /,etc) I think its around 12000 Users before my CPU is overloaded and shut off (in task manager i see it uses around 120-170MB of ram?? Ain't no way)
 
 Since its not real world broswer usage. I think the max load is around a 1000 users (maybe?) (nah just ignore this no one will use it)
+
+btw acessing files wtih special chars as name now works

@@ -25,6 +25,7 @@ type Req struct { // string strings  strings.... Also more header fields with be
 	From           string
 	Host           string
 	Method         string
+	RawPath string
 	Path    string
 	UserAgent      string
 	CurrentConnection  net.Conn // haha very secure
@@ -35,31 +36,12 @@ type Req struct { // string strings  strings.... Also more header fields with be
 	}
 	ContentType string
 }
-type RespHeader struct {
-	HTTPver            string
-	StatusCode         string
-	Date               string
-	Server             string
-	LastModified       string
-	ContentLength      int
-	ContentType        string
-	ContentDisposition string
-	ConnectionType     string
-}
-
 // Returns the time in HTTP format
 func RetDefaultTime() string {
 	loc, _ := time.LoadLocation("Asia/Bangkok") // Set your locale here?
 	time.Local = loc
 	return time.Now().Format("Mon, 02 Jan 2006 15:04:05 GMT")
 }
-
-// Compiles the header
-func (h *RespHeader) PrepRespHeader() string {
-	compiled := fmt.Sprintf("%s %s\r\nDate: %s\r\nServer: %s\r\nLast-Modified: %s\r\nContent-Length: %d\r\nContent-Type: %s\r\nContent-Disposition: %s\r\nConnection: %s\r\n\r\n", h.HTTPver, h.StatusCode, h.Date, h.Server, h.LastModified, h.ContentLength, h.ContentType, h.ContentDisposition, h.ConnectionType)
-	return compiled
-}
-
 // Parse request headers
 func ParseRequest(n net.Conn) (*Req, error) {
 	headerbuf := make([]byte, 8190)
@@ -93,7 +75,8 @@ func ParseRequest(n net.Conn) (*Req, error) {
 		fields := strings.Split(line, " ")
 		if i == 0 && len(fields) >= 3 {
 			h.Method = fields[0]
-			h.Path = fields[1]
+			h.RawPath = fields[1]
+			h.Path,_ = URLunescape(fields[1])
 			h.HTTPver = fields[2]
 		} else if len(fields) >= 2 {
 			switch strings.ToLower(fields[0]) {
@@ -129,17 +112,6 @@ func ParseRequest(n net.Conn) (*Req, error) {
 	h.Data.FormData = make(map[string]string)
 	return h, nil
 }
-func AckHeader(lent int) *RespHeader{
-	h := &RespHeader{}
-	h.HTTPver = "HTTP/1.1"
-	h.StatusCode = "200 OK"
-	h.ContentDisposition = "inline;"
-	h.Server = "shitserver/0.0"
-	h.LastModified = RetDefaultTime()
-	h.Date = RetDefaultTime()
-	h.ContentLength = lent
-	return h
-}
 func URLunescape(s string) (string, error) {
     var buf bytes.Buffer
     for i := 0; i < len(s); i++ {
@@ -173,6 +145,7 @@ type Config struct{
 	AllowDirView bool
 	RootDirectory string
 	IndexFirst bool
+	ServerName string
 }
 func LoadConfig(p string) (*Config){
 	cnfgf,err := os.Open(p)
@@ -205,12 +178,17 @@ func LoadConfig(p string) (*Config){
 			}
 		case "root_directory":
 			cn.RootDirectory = c[1]
+			if string(cn.RootDirectory[len(cn.RootDirectory)-1]) != "/"{
+				cn.RootDirectory += "/"
+			}
 		case "index_first":
 			if c[1] == "true"|| c[1] == "yes"{
 				cn.IndexFirst = true
 			} else {
 				cn.IndexFirst = false
 			}
+		case "server_name":
+			cn.ServerName = c[1]
 		}
 
 	}
